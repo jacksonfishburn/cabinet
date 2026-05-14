@@ -1,0 +1,14 @@
+services:
+  cabinet:
+    build: ./backend
+    ports:
+      - "${CABINET_PORT}:8765"
+    environment:
+      - CABINET_TOKEN=${CABINET_TOKEN}
+      - CABINET_STORAGE_DIR=${CABINET_STORAGE_DIR}
+      - CABINET_MAX_SIZE_MB=${CABINET_MAX_SIZE_MB}
+    volumes:
+      - cabinet-storage:${CABINET_STORAGE_DIR}
+
+volumes:
+  cabinet-storage:
