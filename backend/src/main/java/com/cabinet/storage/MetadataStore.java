@@ -61,7 +61,7 @@ public class MetadataStore {
         if (data == null) {
             return new HashMap<>();
         }
-        return new HashMap<>(data);
+        return data;
     }
 
     private void flush() {
