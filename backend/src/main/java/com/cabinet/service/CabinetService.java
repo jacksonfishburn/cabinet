@@ -4,6 +4,7 @@ import com.cabinet.model.FileRecord;
 import com.cabinet.storage.MetadataStore;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -37,7 +38,15 @@ public class CabinetService {
     }
 
     public byte[] grab(String name) {
-        return new byte[0];
+        metadataStore.find(name)
+                .orElseThrow(() -> new IllegalArgumentException("No archive found for " + name));
+
+        Path path = Paths.get(storageDir, name + ".zip");
+        try {
+            return Files.readAllBytes(path);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read archive for " + name, e);
+        }
     }
 
     public Map<String, FileRecord> peek() {
@@ -45,7 +54,13 @@ public class CabinetService {
     }
 
     public void delete(String name) {
-
+        Path path = Paths.get(storageDir, name + ".zip");
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete archive for " + name, e);
+        }
+        metadataStore.delete(name);
     }
 
     private void validateSizeLimit(String name, byte[] bytes) {
