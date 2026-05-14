@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class MetadataStore {
     private Map<String, FileRecord> data;
@@ -35,14 +36,33 @@ public class MetadataStore {
     }
 
     public void save(String name, FileRecord record) {
-
+        if (data == null) {
+            data = new HashMap<>();
+        }
+        data.put(name, record);
+        flush();
     }
 
     public void delete(String name) {
-
+        if (data != null) {
+            data.remove(name);
+            flush();
+        }
     }
 
+    public Optional<FileRecord> find(String name) {
+        if (data == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(data.get(name));
+    }
 
+    public Map<String, FileRecord> findAll() {
+        if (data == null) {
+            return new HashMap<>();
+        }
+        return new HashMap<>(data);
+    }
 
     private void flush() {
         try {
