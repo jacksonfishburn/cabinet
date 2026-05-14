@@ -15,7 +15,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 public class CabinetService {
-    private MetadataStore metadataStore;
+    private final MetadataStore metadataStore;
 
     @Value("${cabinet.storage-dir}")
     private String storageDir;
@@ -23,10 +23,14 @@ public class CabinetService {
     @Value("${cabinet.max-size-mb}")
     private String maxSize;
 
+    public CabinetService(MetadataStore metadataStore) {
+        this.metadataStore = metadataStore;
+    }
+
     public FileRecord insert(String name, byte[] bytes) {
-        validateSizeLimit(bytes);
+        validateSizeLimit(name, bytes);
         String md5 = computeMd5(bytes);
-        FileRecord record = createRecord(bytes.length, md5);
+        FileRecord record = createRecord(name, bytes.length, md5);
         saveFile(name, bytes);
         metadataStore.save(name, record);
         return record;
@@ -44,15 +48,22 @@ public class CabinetService {
 
     }
 
-    private void validateSizeLimit(byte[] bytes) {
+    private void validateSizeLimit(String name, byte[] bytes) {
         if (bytes == null) {
             throw new IllegalArgumentException("Archive bytes cannot be null");
         }
 
         long maxBytes = Long.parseLong(maxSize) * 1024L * 1024L;
-        if (bytes.length > maxBytes) {
+
+        long currentTotal = metadataStore.findAll().values().stream()
+                .filter(r -> !r.name().equals(name))
+                .mapToLong(FileRecord::sizeBytes)
+                .sum();
+
+        if (currentTotal + bytes.length > maxBytes) {
             throw new IllegalArgumentException(
-                    "Archive is too large: " + bytes.length + " bytes exceeds the limit of " + maxBytes + " bytes"
+                    "Archive would exceed cabinet limit: adding " + bytes.length +
+                            " bytes to " + currentTotal + " bytes exceeds " + maxBytes + " bytes"
             );
         }
     }
@@ -67,8 +78,8 @@ public class CabinetService {
         }
     }
 
-    private FileRecord createRecord(int length, String md5) {
-        return new FileRecord(length, md5, Instant.now(), Instant.now());
+    private FileRecord createRecord(String name, int length, String md5) {
+        return new FileRecord(name, length, md5, Instant.now(), Instant.now());
     }
 
     private void saveFile(String name, byte[] bytes) {
