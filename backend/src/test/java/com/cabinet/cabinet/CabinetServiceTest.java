@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 public class CabinetServiceTest {
 
@@ -65,7 +67,9 @@ public class CabinetServiceTest {
         CabinetService service = newService(store, "0");
         byte[] bytes = "too big".getBytes(StandardCharsets.UTF_8);
 
-        assertThrows(IllegalArgumentException.class, () -> service.insert("oversized", bytes));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.insert("oversized", bytes));
+        // ResponseStatusException#getStatusCode() returns an HttpStatusCode; assert numeric value
+        assertEquals(413, ex.getStatusCode().value());
         assertTrue(store.findAll().isEmpty());
         assertFalse(Files.exists(tempDir.resolve("oversized.zip")));
     }

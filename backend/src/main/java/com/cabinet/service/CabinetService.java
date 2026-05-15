@@ -3,6 +3,7 @@ package com.cabinet.service;
 import com.cabinet.model.FileRecord;
 import com.cabinet.storage.MetadataStore;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -11,6 +12,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,7 +44,7 @@ public class CabinetService {
 
     public byte[] grab(String name) {
         metadataStore.find(name)
-                .orElseThrow(() -> new IllegalArgumentException("No archive found for " + name));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Can't find" + name));
 
         Path path = Paths.get(storageDir, name + ".zip");
         try {
@@ -56,6 +59,9 @@ public class CabinetService {
     }
 
     public void delete(String name) {
+        metadataStore.find(name)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No archive found for: " + name));
+
         Path path = Paths.get(storageDir, name + ".zip");
         try {
             Files.deleteIfExists(path);
@@ -76,12 +82,9 @@ public class CabinetService {
                 .filter(r -> !r.name().equals(name))
                 .mapToLong(FileRecord::sizeBytes)
                 .sum();
-
         if (currentTotal + bytes.length > maxBytes) {
-            throw new IllegalArgumentException(
-                    "Archive would exceed cabinet limit: adding " + bytes.length +
-                            " bytes to " + currentTotal + " bytes exceeds " + maxBytes + " bytes"
-            );
+            throw new ResponseStatusException(HttpStatusCode.valueOf(413),
+                    "An archive that big wont fit in the cabinet.");
         }
     }
 
