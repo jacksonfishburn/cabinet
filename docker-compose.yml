@@ -9,6 +9,7 @@ services:
       - CABINET_MAX_SIZE_MB=${CABINET_MAX_SIZE_MB}
     volumes:
       - cabinet-storage:${CABINET_STORAGE_DIR}
+    restart: unless-stopped
 
 volumes:
   cabinet-storage:
