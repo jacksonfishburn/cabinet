@@ -3,6 +3,7 @@ package com.cabinet.service;
 import com.cabinet.model.FileRecord;
 import com.cabinet.storage.MetadataStore;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -15,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
+@Service
 public class CabinetService {
     private final MetadataStore metadataStore;
 
