@@ -5,3 +5,7 @@ export interface FileRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ArchiveListProps {
+  names: {name: string, md5: string}[]
+}

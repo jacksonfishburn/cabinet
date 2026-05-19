@@ -67,9 +67,18 @@ Authorization: Bearer <token>
 - Now i want to build a web page GUI which allows for the same functionality
 - Built in TypeScript with React and TailWind
 - I want you to write small peices of code for me as we go through building this
+- I want all software design decisions to be kept **As Simple As Possible!**
 
 ### General plan
 1. make api fetcher
 2. make page that shows your files 
 3. add ways to grab and insert
 4. add login
+
+### Design aesthetic for Cabinet
+- Cabinet is a personal file-sync tool. The UI should feel retro-warm and utilitarian — like a well-organized physical filing system translated into software. The goal is structured, calm, and a little characterful without being decorative.
+- Typography — use IBM Plex Serif or a slab serif for headings and display text, paired with IBM Plex Mono or JetBrains Mono for filenames, metadata, sizes, and dates. The monospace text should do a lot of the heavy lifting visually.
+- Color — warm off-whites and aged paper tones for backgrounds (not pure white). One rich accent color — deep teal or muted rust/terracotta. Muted warm grays for secondary text. Nothing bright or saturated.
+- Layout — think in horizontal rows, not cards or grids. Items should feel like labeled drawer entries — tight, structured, with clear dividers between them. Heavy-ish horizontal rules. Metadata pushed to the right like a file tag. No floating cards, no shadows.
+- Details — uppercase or small-caps for column headers and labels. Flat and structural throughout. No rounded corners everywhere, no gradients, no glassmorphism. Minimal iconography. The feeling of the file cabinet comes from the structure and rhythm of the layout, not from any literal imagery.
+- Overall feel — something a developer built for themselves that happens to look considered. Warm but precise. Analog soul, digital execution.
