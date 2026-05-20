@@ -6,7 +6,7 @@ import ArchiveView from "../component/ArchiveView";
 
 
 function Dashboard() {
-    const { files, deleteFile, uploadFile } = useFiles();
+    const { files, error } = useFiles();
     const [selected, setSelected] = useState<FileRecord | null>(null);
 
     const archiveList = Object.values(files).map(f => ({ name: f.name, md5: f.md5 }));
@@ -23,7 +23,12 @@ function Dashboard() {
             <ArchiveList names={archiveList} onSelect={(md5) => setSelected(findByMd5(md5))} />
             </div>
 
-            <div className="pl-0 md:pl-2 mt-25 ml-10">        
+            <div className="pl-0 md:pl-2 mt-25 ml-10">
+                {error && (
+                    <div className="mb-4 border-2 border-red-900 bg-red-950 px-4 py-3 text-sm text-red-100 font-mono">
+                        {error}
+                    </div>
+                )}
                 {selected && <ArchiveView {...selected} />}
             </div>
             </div>

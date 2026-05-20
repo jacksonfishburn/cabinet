@@ -1,7 +1,7 @@
 
 import type { FileRecord } from "./types";
 
-let SERVER_URL = "http://159.89.151.173:8765/api"
+const SERVER_URL = "/api";
 const TOKEN = import.meta.env.VITE_TOKEN
 
 const getHeaders = (contentType?: string): HeadersInit => ({
