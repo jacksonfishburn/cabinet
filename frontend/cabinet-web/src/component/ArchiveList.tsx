@@ -1,11 +1,8 @@
 
 import type { ArchiveListProps } from "../types"
 
-const ArchiveList = ({ names }: ArchiveListProps) => {
 
-  const handleArchiveClick = (md5: string) => {
-    void md5;
-  };
+const ArchiveList = ({ names, onSelect }: ArchiveListProps) => {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -26,7 +23,7 @@ const ArchiveList = ({ names }: ArchiveListProps) => {
             names.map(({ name, md5 }) => (
               <div
                 key={md5}
-                onClick={() => handleArchiveClick(md5)}
+                onClick={() => onSelect(md5)}
                 className={`
                   cursor-pointer
                   transition-all
@@ -36,11 +33,12 @@ const ArchiveList = ({ names }: ArchiveListProps) => {
                   bg-gradient-to-b from-amber-50 to-amber-100
                   border-2 border-amber-800
                   rounded-t-lg
+                  shadow-xl shadow-black/40
                   px-6 py-4
                   
                   /* Hover and selected states */
-                  hover:from-amber-100 hover:to-amber-200
-                  hover:shadow-md
+                  hover:from-amber-100 hover:to-amber-50
+                  hover:shadow-2xl
                   
                   /* Folder tab top accent */
                   before:absolute before:top-0 before:left-0 before:right-0

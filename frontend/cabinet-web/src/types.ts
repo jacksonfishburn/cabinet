@@ -8,4 +8,5 @@ export interface FileRecord {
 
 export interface ArchiveListProps {
   names: {name: string, md5: string}[]
+  onSelect: (md5: string) => void
 }
