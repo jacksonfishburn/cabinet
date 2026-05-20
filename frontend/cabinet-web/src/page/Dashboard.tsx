@@ -1,12 +1,12 @@
 import { useFiles } from "../hook/useFiles";
 import { useState } from "react";
 import type { FileRecord } from "../types";
-import ArchiveList from "../component/archiveList";
+import ArchiveList from "../component/ArchiveList";
 import ArchiveView from "../component/ArchiveView";
 
 
 function Dashboard() {
-    const { files, isLoading, deleteFile, uploadFile } = useFiles();
+    const { files, deleteFile, uploadFile } = useFiles();
     const [selected, setSelected] = useState<FileRecord | null>(null);
 
     const archiveList = Object.values(files).map(f => ({ name: f.name, md5: f.md5 }));
@@ -16,7 +16,8 @@ function Dashboard() {
     }
 
     return (
-        <main className="min-h-screen bg-stone-700 text-slate-100 p-6 md:p-8">
+        <main className="min-h-screen bg-stone-600 text-slate-100 p-6 md:p-8
+        bg-[linear-gradient(#BFB9A7,transparent_1px),linear-gradient(90deg,#BFB9A7,transparent_1px)] bg-[size:20px_20px]">
             <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-[420px_1fr]">
             <div className="pr-4 md:pr-6">
             <ArchiveList names={archiveList} onSelect={(md5) => setSelected(findByMd5(md5))} />
