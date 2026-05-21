@@ -1,9 +1,14 @@
 import type { ArchiveViewProps } from "../types"
 
-const ArchiveView = ({ name, sizeBytes, createdAt, updatedAt, onDelete, isDeleting = false }: ArchiveViewProps) => {
+const ArchiveView = ({ name, sizeBytes, createdAt, updatedAt, onDelete, onGrab, isDeleting = false, isGrabbing = false }: ArchiveViewProps) => {
 
     const handleArchiveDelete = async () => {
         await onDelete(name);
+    };
+
+    const handleArchiveGrab = async () => {
+        if (!onGrab) return;
+        await onGrab(name);
     };
 
     const formatDate = (dateString: string) => {
@@ -72,7 +77,19 @@ const ArchiveView = ({ name, sizeBytes, createdAt, updatedAt, onDelete, isDeleti
                 </div>
 
                 {/* Delete Button - Bottom Right */}
-                <div className="pt-6 border-t-2 border-amber-800 flex justify-end">
+                <div className="pt-6 border-t-2 border-amber-800 flex justify-end gap-3">
+                    <button
+                        onClick={handleArchiveGrab}
+                        disabled={!onGrab || isGrabbing}
+                        className={
+                            `px-4 py-2 text-amber-900 font-mono text-sm font-semibold uppercase tracking-wide transition-colors bg-amber-100 border-2 border-amber-800 hover:bg-amber-200` +
+                            (isGrabbing ? ' opacity-60 cursor-not-allowed' : '')
+                        }
+                        aria-busy={isGrabbing}
+                    >
+                        {isGrabbing ? 'Grabbing...' : 'Grab'}
+                    </button>
+
                     <button
                         onClick={handleArchiveDelete}
                         disabled={isDeleting}

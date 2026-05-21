@@ -7,8 +7,10 @@ export interface FileRecord {
 }
 
 export type ArchiveViewProps = FileRecord & {
-    onDelete: (name: string) => Promise<void>;
-    isDeleting?: boolean;
+  onDelete: (name: string) => Promise<void>;
+  onGrab?: (name: string) => Promise<void>;
+  isDeleting?: boolean;
+  isGrabbing?: boolean;
 };
 
 export interface ArchiveListProps {

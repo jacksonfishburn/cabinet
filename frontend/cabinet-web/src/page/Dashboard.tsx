@@ -6,10 +6,11 @@ import ArchiveView from "../component/ArchiveView";
 
 
 function Dashboard() {
-    const { files, error, deleteFile, uploadFile } = useFiles();
+    const { files, error, deleteFile, uploadFile, grabFile } = useFiles();
     const [selected, setSelected] = useState<FileRecord | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isGrabbing, setIsGrabbing] = useState(false);
 
     const archiveList = Object.values(files).map(f => ({ name: f.name, md5: f.md5 }));
 
@@ -25,6 +26,26 @@ function Dashboard() {
         } catch (e) {
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleGrab = async (name: string) => {
+        setSelected(null);
+        setIsGrabbing(true);
+        try {
+            const file = await grabFile(name);
+            // trigger browser download
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+        } finally {
+            setIsGrabbing(false);
         }
     };
 
@@ -52,7 +73,7 @@ function Dashboard() {
                     </div>
                 )}
                 {selected && (
-                    <ArchiveView {...selected} onDelete={handleDelete} isDeleting={isDeleting} />
+                    <ArchiveView {...selected} onDelete={handleDelete} onGrab={handleGrab} isDeleting={isDeleting} isGrabbing={isGrabbing} />
                 )}
             </div>
             </div>
