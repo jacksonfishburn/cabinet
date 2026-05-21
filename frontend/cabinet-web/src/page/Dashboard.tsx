@@ -6,14 +6,26 @@ import ArchiveView from "../component/ArchiveView";
 
 
 function Dashboard() {
-    const { files, error } = useFiles();
+    const { files, error, deleteFile } = useFiles();
     const [selected, setSelected] = useState<FileRecord | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const archiveList = Object.values(files).map(f => ({ name: f.name, md5: f.md5 }));
 
     const findByMd5 = (md5: string) => {
         return Object.values(files).find(f => f.md5 === md5) ?? null;
     }
+
+    const handleDelete = async (name: string) => {
+        setSelected(null);
+        setIsDeleting(true);
+        try {
+            await deleteFile(name);
+        } catch (e) {
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <main className="min-h-screen bg-stone-600 text-slate-100 p-6 md:p-8
@@ -29,7 +41,9 @@ function Dashboard() {
                         {error}
                     </div>
                 )}
-                {selected && <ArchiveView {...selected} />}
+                {selected && (
+                    <ArchiveView {...selected} onDelete={handleDelete} isDeleting={isDeleting} />
+                )}
             </div>
             </div>
         </main>

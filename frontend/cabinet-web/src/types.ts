@@ -6,6 +6,11 @@ export interface FileRecord {
   updatedAt: string;
 }
 
+export type ArchiveViewProps = FileRecord & {
+    onDelete: (name: string) => Promise<void>;
+    isDeleting?: boolean;
+};
+
 export interface ArchiveListProps {
   names: {name: string, md5: string}[]
   onSelect: (md5: string) => void

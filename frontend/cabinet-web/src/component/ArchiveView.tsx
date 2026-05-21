@@ -1,10 +1,9 @@
-import type { FileRecord } from "../types"
+import type { ArchiveViewProps } from "../types"
 
-const ArchiveView = ({ name, sizeBytes, createdAt, updatedAt }: FileRecord) => {
+const ArchiveView = ({ name, sizeBytes, createdAt, updatedAt, onDelete, isDeleting = false }: ArchiveViewProps) => {
 
-    const handleArchiveDelete = (name: string, md5: string) => {
-        void name;
-        void md5;
+    const handleArchiveDelete = async () => {
+        await onDelete(name);
     };
 
     const formatDate = (dateString: string) => {
@@ -75,10 +74,17 @@ const ArchiveView = ({ name, sizeBytes, createdAt, updatedAt }: FileRecord) => {
                 {/* Delete Button - Bottom Right */}
                 <div className="pt-6 border-t-2 border-amber-800 flex justify-end">
                     <button
-                        onClick={() => handleArchiveDelete(name, '')}
-                        className="px-4 py-2 bg-amber-900 text-amber-50 font-mono text-sm font-semibold uppercase tracking-wide hover:bg-amber-800 transition-colors"
+                        onClick={handleArchiveDelete}
+                        disabled={isDeleting}
+                        className={
+                            `px-4 py-2 text-amber-50 font-mono text-sm font-semibold uppercase tracking-wide transition-colors ` +
+                            (isDeleting
+                                ? 'bg-amber-700 opacity-60 cursor-not-allowed'
+                                : 'bg-amber-900 hover:bg-amber-800')
+                        }
+                        aria-busy={isDeleting}
                     >
-                        Delete
+                        {isDeleting ? 'Deleting...' : 'Delete'}
                     </button>
                 </div>
             </div>
