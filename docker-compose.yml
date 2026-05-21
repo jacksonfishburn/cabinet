@@ -7,9 +7,33 @@ services:
       - CABINET_TOKEN=${CABINET_TOKEN}
       - CABINET_STORAGE_DIR=${CABINET_STORAGE_DIR}
       - CABINET_MAX_SIZE_MB=${CABINET_MAX_SIZE_MB}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/cabinet
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+        postgres:
+          condition: service_healthy
     volumes:
       - cabinet-storage:${CABINET_STORAGE_DIR}
     restart: unless-stopped
 
+  postgres:
+    image: postgres:17-alpine
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=cabinet
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d cabinet" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   cabinet-storage:
+  postgres_data:

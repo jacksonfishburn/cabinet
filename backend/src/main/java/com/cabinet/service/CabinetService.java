@@ -36,6 +36,7 @@ public class CabinetService {
     public FileRecord insert(String name, byte[] bytes) {
         validateSizeLimit(name, bytes);
         String md5 = computeMd5(bytes);
+
         FileRecord record = createRecord(name, bytes.length, md5);
         saveFile(name, bytes);
         metadataStore.save(name, record);
