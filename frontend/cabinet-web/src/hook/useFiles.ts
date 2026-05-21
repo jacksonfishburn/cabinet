@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FileRecord } from "../types";
 import { deleteItem, insert, peek } from "../api";
+import { zipSingleFile } from "../util/zipSingleFile";
 
 
 export function useFiles() {
@@ -33,13 +34,15 @@ export function useFiles() {
     }
   };
 
-  const uploadFile = async (name: string, bytes: Blob) => {
+  const uploadFile = async (file: File) => {
     try {
       setError(null);
-      await insert(name, bytes);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const zipBlob = zipSingleFile(file.name, bytes, new Date(file.lastModified));
+      await insert(file.name, zipBlob);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to upload '${name}'`);
+      setError(err instanceof Error ? err.message : `Failed to upload '${file.name}'`);
     }
   };
 

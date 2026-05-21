@@ -14,4 +14,6 @@ export type ArchiveViewProps = FileRecord & {
 export interface ArchiveListProps {
   names: {name: string, md5: string}[]
   onSelect: (md5: string) => void
+  onUpload: (file: File) => Promise<void>
+  isUploading?: boolean
 }

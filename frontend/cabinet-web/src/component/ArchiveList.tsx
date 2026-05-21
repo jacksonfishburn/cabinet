@@ -1,8 +1,20 @@
-
+import { useRef, type ChangeEvent } from "react";
 import type { ArchiveListProps } from "../types"
 
 
-const ArchiveList = ({ names, onSelect }: ArchiveListProps) => {
+const ArchiveList = ({ names, onSelect, onUpload, isUploading = false }: ArchiveListProps) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    await onUpload(file);
+  };
 
   return (
     <div className="relative w-full max-w-3xl mx-auto mb-4 min-h-[calc(100vh-4rem)]">
@@ -19,11 +31,29 @@ const ArchiveList = ({ names, onSelect }: ArchiveListProps) => {
         </div>
 
         <div className="bg-amber-100 rounded-lg shadow-lg p-8 border-4 border-amber-900">
-          {/* Files Label */}
-          <div className="mb-6 pb-4 border-b-2 border-amber-800">
+          <div className="mb-6 flex items-center justify-between gap-3 border-b-2 border-amber-800 pb-4">
             <h2 className="text-sm font-bold uppercase tracking-wide text-amber-900">
               Files
             </h2>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="border border-dashed border-amber-900 bg-amber-100 px-4 py-2 font-mono text-sm tracking-wide text-amber-900 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isUploading ? "Uploading..." : "Insert"}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                aria-hidden="true"
+              />
+            </div>
           </div>
 
           {/* Archives Stack */}

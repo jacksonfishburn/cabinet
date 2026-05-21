@@ -25,7 +25,7 @@ export const peek = async (): Promise<Record<string, FileRecord>> => {
 
 
 export const insert = async (name: string, zipBlob: Blob): Promise<FileRecord> => {
-  const response = await fetch(`${SERVER_URL}/${name}`, {
+  const response = await fetch(`${SERVER_URL}/${encodeURIComponent(name)}`, {
     method: 'POST',
     headers: getHeaders('application/octet-stream'),
     body: zipBlob,
@@ -40,7 +40,7 @@ export const insert = async (name: string, zipBlob: Blob): Promise<FileRecord> =
 
 
 export const grab = async (name: string): Promise<Blob> => {
-  const response = await fetch(`${SERVER_URL}/${name}`, {
+  const response = await fetch(`${SERVER_URL}/${encodeURIComponent(name)}`, {
     method: 'GET',
     headers: getHeaders(),
   });
@@ -54,7 +54,7 @@ export const grab = async (name: string): Promise<Blob> => {
 
 
 export const deleteItem = async (name: string): Promise<void> => {
-  const response = await fetch(`${SERVER_URL}/${name}`, {
+  const response = await fetch(`${SERVER_URL}/${encodeURIComponent(name)}`, {
     method: 'DELETE',
     headers: getHeaders(),
   });
