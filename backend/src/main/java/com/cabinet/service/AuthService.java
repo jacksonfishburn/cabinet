@@ -1,23 +1,31 @@
 package com.cabinet.service;
 
+import com.cabinet.entity.ApiToken;
 import com.cabinet.entity.User;
 import com.cabinet.model.AuthRequest;
 import com.cabinet.model.AuthResponse;
+import com.cabinet.repository.TokenRepository;
 import com.cabinet.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.Base64;
+
 @Service
-public class UserService {
+public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
-    private final JwtService jwtService;
+    private final TokenRepository tokenRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder encoder, JwtService jwtService) {
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    public AuthService(UserRepository userRepository, PasswordEncoder encoder, TokenRepository tokenRepository) {
         this.userRepository = userRepository;
         this.encoder = encoder;
-        this.jwtService = jwtService;
+        this.tokenRepository = tokenRepository;
     }
 
     public AuthResponse register(AuthRequest request) {
@@ -27,7 +35,8 @@ public class UserService {
         String encodedPassword = encoder.encode(request.password());
         User user = new User(request.username(), encodedPassword);
         userRepository.save(user);
-        String token = jwtService.generate(user);
+
+        String token = createAndStoreTokenFor(user);
         return new AuthResponse(user.getId(), user.getUsername(), token);
     }
 
@@ -37,7 +46,26 @@ public class UserService {
         if (!encoder.matches(request.password(), user.getPasswordHash())) {
             throw new RuntimeException("Invalid password");
         }
-        String token = jwtService.generate(user);
+        String token = createAndStoreTokenFor(user);
         return new AuthResponse(user.getId(), user.getUsername(), token);
+    }
+
+    public void logout(String token) {
+        tokenRepository.findByToken(token).ifPresent(tokenRepository::delete);
+    }
+
+    private String createAndStoreTokenFor(User user) {
+        byte[] bytes = new byte[32];
+        secureRandom.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        Instant now = Instant.now();
+
+        // default token expiry: 30 days
+        long tokenExpirySeconds = 30L * 24L * 60L * 60L;
+
+        Instant expiresAt = now.plusSeconds(tokenExpirySeconds);
+        ApiToken apiToken = new ApiToken(token, user, expiresAt, false, now);
+        tokenRepository.save(apiToken);
+        return token;
     }
 }
