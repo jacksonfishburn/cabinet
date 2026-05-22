@@ -10,6 +10,11 @@ import java.util.Map;
 @Table(name = "users")
 public class User {
 
+    public User(String username, String passwordHash) {
+        this.username = username;
+        this.passwordHash = passwordHash;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
