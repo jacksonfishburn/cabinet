@@ -23,4 +23,13 @@ public class AuthController {
     public AuthResponse login(@RequestBody AuthRequest request) {
         return authService.login(request);
     }
+
+    @DeleteMapping("/logout")
+    public void logout(@RequestHeader("Authorization") String header) {
+        if (header == null || !header.startsWith("Bearer ")) {
+            throw new RuntimeException("Missing or invalid Authorization header");
+        }
+        String token = header.substring(7);
+        authService.logout(token);
+    }
 }
