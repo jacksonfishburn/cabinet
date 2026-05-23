@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -27,10 +28,12 @@ public class CabinetService {
         fileService.validateSizeLimit(userRecords, fileName, bytes);
         String md5 = computeMd5(bytes);
 
-        FileRecord fileRecord = createRecord(user, fileName, bytes.length, md5);
-        repository.save(fileRecord);
-        fileService.saveFile(user.getUsername(), fileName, bytes);
-        return new InsertResponse(fileName, bytes.length, md5);
+        FileRecord existing = userRecords.stream()
+                .filter(r -> r.getName().equals(fileName))
+                .findFirst()
+                .orElse(null);
+
+        return saveOrUpdate(user, fileName, bytes, md5, existing);
     }
 
     public byte[] grab(User user, String fileName) {
@@ -58,5 +61,39 @@ public class CabinetService {
 
     private FileRecord createRecord(User user, String name, int size, String md5) {
         return new FileRecord(user, name, size, md5);
+    }
+
+    private InsertResponse saveOrUpdate(User user, String fileName, byte[] bytes, String md5, FileRecord existing) {
+        if (existing != null) {
+            if (md5.equals(existing.getMd5())) {
+                existing.setUpdatedAt(Instant.now());
+                repository.save(existing);
+                return new InsertResponse(fileName, existing.getSizeBytes(), existing.getMd5());
+            }
+
+            fileService.saveFile(user.getUsername(), fileName, bytes);
+            existing.setMd5(md5);
+            existing.setSizeBytes(bytes.length);
+            existing.setUpdatedAt(Instant.now());
+            try {
+                repository.save(existing);
+            } catch (RuntimeException e) {
+                try
+                { fileService.deleteFile(user.getUsername(), fileName);
+                } catch (Exception ignore) {}
+                throw e;
+            }
+            return new InsertResponse(fileName, bytes.length, md5);
+        }
+
+        FileRecord fileRecord = createRecord(user, fileName, bytes.length, md5);
+        fileService.saveFile(user.getUsername(), fileName, bytes);
+        try {
+            repository.save(fileRecord);
+        } catch (RuntimeException e) {
+            try { fileService.deleteFile(user.getUsername(), fileName); } catch (Exception ignore) {}
+            throw e;
+        }
+        return new InsertResponse(fileName, bytes.length, md5);
     }
 }
