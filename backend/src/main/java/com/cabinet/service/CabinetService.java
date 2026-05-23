@@ -1,92 +1,49 @@
 package com.cabinet.service;
 
-import com.cabinet.model.FileRecord;
-import com.cabinet.storage.MetadataStore;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatusCode;
+import com.cabinet.entity.FileRecord;
+import com.cabinet.entity.User;
+import com.cabinet.model.InsertResponse;
+import com.cabinet.repository.FileRecordRepository;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.time.Instant;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-import java.util.Map;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.util.List;
 
 @Service
 public class CabinetService {
-    private final MetadataStore metadataStore;
+    private final FileRecordRepository repository;
+    private final FileService fileService;
 
-    @Value("${cabinet.storage-dir}")
-    private String storageDir;
-
-    @Value("${cabinet.max-size-mb}")
-    private String maxSize;
-
-    public CabinetService(MetadataStore metadataStore) {
-        this.metadataStore = metadataStore;
+    public CabinetService(FileRecordRepository repository, FileService fileService) {
+        this.repository = repository;
+        this.fileService = fileService;
     }
 
-    public FileRecord insert(String name, byte[] bytes) {
-        validateSizeLimit(name, bytes);
+    public InsertResponse insert(User user, String fileName, byte[] bytes) {
+        List<FileRecord> userRecords = repository.findByUserId(user.getId());
+
+        fileService.validateSizeLimit(userRecords, fileName, bytes);
         String md5 = computeMd5(bytes);
 
-        FileRecord record = createRecord(name, bytes.length, md5);
-        saveFile(name, bytes);
-        metadataStore.save(name, record);
-        return record;
+        FileRecord fileRecord = createRecord(user, fileName, bytes.length, md5);
+        repository.save(fileRecord);
+        fileService.saveFile(user.getUsername(), fileName, bytes);
+        return new InsertResponse(fileName, bytes.length, md5);
     }
 
-    public byte[] grab(String name) {
-        metadataStore.find(name)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Can't find" + name));
-
-        Path path = Paths.get(storageDir, name + ".zip");
-        try {
-            return Files.readAllBytes(path);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read archive for " + name, e);
-        }
+    public byte[] grab(User user, String fileName) {
+        return fileService.readFile(user.getUsername(), fileName);
     }
 
-    public Map<String, FileRecord> peek() {
-        return metadataStore.findAll();
+    public List<FileRecord> peek(User user) {
+        return repository.findByUserId(user.getId());
     }
 
-    public void delete(String name) {
-        metadataStore.find(name)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No archive found for: " + name));
-
-        Path path = Paths.get(storageDir, name + ".zip");
-        try {
-            Files.deleteIfExists(path);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to delete archive for " + name, e);
-        }
-        metadataStore.delete(name);
-    }
-
-    private void validateSizeLimit(String name, byte[] bytes) {
-        if (bytes == null) {
-            throw new IllegalArgumentException("Archive bytes cannot be null");
-        }
-
-        long maxBytes = Long.parseLong(maxSize) * 1024L * 1024L;
-
-        long currentTotal = metadataStore.findAll().values().stream()
-                .filter(r -> !r.name().equals(name))
-                .mapToLong(FileRecord::sizeBytes)
-                .sum();
-        if (currentTotal + bytes.length > maxBytes) {
-            throw new ResponseStatusException(HttpStatusCode.valueOf(413),
-                    "An archive that big wont fit in the cabinet.");
-        }
+    public void delete(User user, String name) {
+        fileService.deleteFile(user.getUsername(), name);
+        repository.deleteByUserIdAndName(user.getId(), name);
     }
 
     private String computeMd5(byte[] bytes) {
@@ -99,25 +56,7 @@ public class CabinetService {
         }
     }
 
-    private FileRecord createRecord(String name, int length, String md5) {
-        return new FileRecord(name, length, md5, Instant.now(), Instant.now());
-    }
-
-    private void saveFile(String name, byte[] bytes) {
-        try {
-            Path storagePath = Paths.get(storageDir);
-            Files.createDirectories(storagePath);
-
-            Path archivePath = storagePath.resolve(name + ".zip");
-            Files.write(
-                    archivePath,
-                    bytes,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING,
-                    StandardOpenOption.WRITE
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to save archive for " + name, e);
-        }
+    private FileRecord createRecord(User user, String name, int size, String md5) {
+        return new FileRecord(user, name, size, md5);
     }
 }

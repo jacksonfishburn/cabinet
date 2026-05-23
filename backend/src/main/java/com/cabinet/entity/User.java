@@ -1,6 +1,6 @@
 package com.cabinet.entity;
 
-import com.cabinet.model.FileRecord;
+import com.cabinet.model.InsertResponse;
 import jakarta.persistence.*;
 
 import java.util.HashMap;
@@ -26,7 +26,7 @@ public class User {
     private String passwordHash;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Map<String, FileRecord> files = new HashMap<>();
+    private Map<String, InsertResponse> files = new HashMap<>();
 
     public Long getId() {
         return id;
@@ -52,11 +52,11 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public Map<String, FileRecord> getFiles() {
+    public Map<String, InsertResponse> getFiles() {
         return files;
     }
 
-    public void setFiles(Map<String, FileRecord> files) {
+    public void setFiles(Map<String, InsertResponse> files) {
         this.files = files;
     }
 }
