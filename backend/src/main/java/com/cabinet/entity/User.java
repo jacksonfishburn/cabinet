@@ -1,14 +1,16 @@
 package com.cabinet.entity;
 
-import com.cabinet.model.InsertResponse;
 import jakarta.persistence.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Entity
 @Table(name = "users")
 public class User {
+
+    protected User() {}
 
     public User(String username, String passwordHash) {
         this.username = username;
@@ -26,7 +28,7 @@ public class User {
     private String passwordHash;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Map<String, InsertResponse> files = new HashMap<>();
+    private List<FileRecord> files = new java.util.ArrayList<>();
 
     public Long getId() {
         return id;
@@ -52,11 +54,12 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public Map<String, InsertResponse> getFiles() {
+    public List<FileRecord> getFiles() {
         return files;
     }
 
-    public void setFiles(Map<String, InsertResponse> files) {
-        this.files = files;
+    @Override
+    public String toString() {
+        return username;
     }
 }

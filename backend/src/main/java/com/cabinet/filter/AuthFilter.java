@@ -7,7 +7,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -42,16 +44,22 @@ public class AuthFilter extends OncePerRequestFilter {
         }
 
         String tokenValue = header.substring(7);
-        ApiToken apiToken = tokenRepository.findByToken(tokenValue)
-                .orElse(null);
-
+        ApiToken apiToken = null;
+        try {
+            apiToken = tokenRepository.findByToken(tokenValue).orElse(null);
+        } catch(DataAccessException dbEx) {
+            response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            response.getWriter().write("Auth DB unavailable");
+            return;
+        }
         if (apiToken == null) {
             reject(response);
             return;
         }
 
         UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(apiToken.getUser(), null, List.of());
+                new UsernamePasswordAuthenticationToken(apiToken.getUser(), null,
+                        List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         chain.doFilter(request, response);

@@ -1,11 +1,24 @@
 package com.cabinet.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
 @Table(name = "file_records")
 public class FileRecord {
+
+    public FileRecord() {}
+
+    public FileRecord(User user, String name, long sizeBytes, String md5) {
+        this.user = user;
+        this.name = name;
+        this.sizeBytes = sizeBytes;
+        this.md5 = md5;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -18,20 +31,10 @@ public class FileRecord {
     private Instant createdAt;
     private Instant updatedAt;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
-    public FileRecord() {}
-
-    public FileRecord(User user, String name, long sizeBytes, String md5) {
-        this.user = user;
-        this.name = name;
-        this.sizeBytes = sizeBytes;
-        this.md5 = md5;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
-    }
 
     public Long getId() {
         return id;
@@ -63,6 +66,18 @@ public class FileRecord {
 
     public void setMd5(String md5) {
         this.md5 = md5;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     public void setUpdatedAt(Instant updatedAt) {

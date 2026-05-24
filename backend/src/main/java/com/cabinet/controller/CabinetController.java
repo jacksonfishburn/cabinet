@@ -56,5 +56,6 @@ public class CabinetController {
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assert auth != null;
-        return (User) auth.getPrincipal();    }
+        return (User) auth.getPrincipal();
+    }
 }
