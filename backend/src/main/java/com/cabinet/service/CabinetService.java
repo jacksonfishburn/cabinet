@@ -5,6 +5,7 @@ import com.cabinet.entity.User;
 import com.cabinet.model.InsertResponse;
 import com.cabinet.repository.FileRecordRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -36,6 +37,7 @@ public class CabinetService {
         return saveOrUpdate(user, fileName, bytes, md5, existing);
     }
 
+    @Transactional 
     public byte[] grab(User user, String fileName) {
         return fileService.readFile(user.getUsername(), fileName);
     }
@@ -44,6 +46,7 @@ public class CabinetService {
         return repository.findByUserId(user.getId());
     }
 
+    @Transactional 
     public void delete(User user, String name) {
         fileService.deleteFile(user.getUsername(), name);
         repository.deleteByUserIdAndName(user.getId(), name);
