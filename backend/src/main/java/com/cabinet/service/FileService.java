@@ -1,6 +1,9 @@
 package com.cabinet.service;
 
 import com.cabinet.entity.FileRecord;
+import com.cabinet.exception.FileTooLargeException;
+import com.cabinet.exception.InvalidFileException;
+import com.cabinet.exception.StorageException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -42,13 +45,13 @@ public class FileService {
                     StandardOpenOption.WRITE
             );
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save archive for " + fileName, e);
+            throw new StorageException("Failed to save archive for " + fileName, e);
         }
     }
 
     public void validateSizeLimit(List<FileRecord> records, String name, byte[] bytes) {
         if (bytes == null) {
-            throw new IllegalArgumentException("Archive bytes cannot be null");
+            throw new InvalidFileException("Archive bytes cannot be null");
         }
 
         long maxBytes = Long.parseLong(maxSize) * 1024L * 1024L;
@@ -64,8 +67,7 @@ public class FileService {
         long totalBytes = records.stream().mapToLong(FileRecord::getSizeBytes).sum();
 
         if (totalBytes + bytes.length > maxBytes) {
-            throw new ResponseStatusException(HttpStatusCode.valueOf(413),
-                    "An archive that big wont fit in the cabinet.");
+            throw new FileTooLargeException(maxBytes);
         }
     }
 
@@ -77,7 +79,7 @@ public class FileService {
              Path archivePath = Paths.get(storageDir, safeUsername, safeFileName + ".zip");
              return Files.readAllBytes(archivePath);
          } catch (Exception e) {
-             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No archive found for: " + fileName);
+             throw new StorageException("No archive found for: " + fileName, e);
          }
      }
 
@@ -89,7 +91,7 @@ public class FileService {
              Path path = Paths.get(storageDir, safeUsername, safeFileName + ".zip");
              Files.deleteIfExists(path);
          } catch (Exception e) {
-             throw new RuntimeException("Failed to delete archive for " + fileName, e);
+             throw new StorageException("Failed to delete archive for " + fileName, e);
          }
      }
 

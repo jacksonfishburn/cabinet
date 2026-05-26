@@ -2,6 +2,8 @@ package com.cabinet.service;
 
 import com.cabinet.entity.ApiToken;
 import com.cabinet.entity.User;
+import com.cabinet.exception.UnauthorizedException;
+import com.cabinet.exception.UserAlreadyExistsException;
 import com.cabinet.model.AuthRequest;
 import com.cabinet.model.AuthResponse;
 import com.cabinet.repository.TokenRepository;
@@ -30,7 +32,7 @@ public class AuthService {
 
     public AuthResponse register(AuthRequest request) {
         if (userRepository.existsByUsername(request.username())) {
-            throw new RuntimeException("Username already exists");
+            throw new UserAlreadyExistsException(request.username());
         }
         String encodedPassword = encoder.encode(request.password());
         User user = new User(request.username(), encodedPassword);
@@ -42,16 +44,18 @@ public class AuthService {
 
     public AuthResponse login(AuthRequest request) {
         User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UnauthorizedException("User '" + request.username() + "' not found"));
         if (!encoder.matches(request.password(), user.getPasswordHash())) {
-            throw new RuntimeException("Invalid password");
+            throw new UnauthorizedException("Invalid password for user '" + request.username() + "'");
         }
         String token = createAndStoreTokenFor(user);
         return new AuthResponse(user.getId(), user.getUsername(), token);
     }
 
     public void logout(String token) {
-        tokenRepository.findByToken(token).ifPresent(tokenRepository::delete);
+        ApiToken apiToken = tokenRepository.findByToken(token)
+                .orElseThrow(() -> new UnauthorizedException("Not logged in."));
+        tokenRepository.delete(apiToken);
     }
 
     private String createAndStoreTokenFor(User user) {

@@ -1,6 +1,7 @@
 package com.cabinet.filter;
 
 import com.cabinet.entity.ApiToken;
+import com.cabinet.exception.UnauthorizedException;
 import com.cabinet.repository.TokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -39,21 +40,14 @@ public class AuthFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
         if (header == null || !header.startsWith("Bearer ")) {
-            reject(response);
+            reject();
             return;
         }
 
         String tokenValue = header.substring(7);
-        ApiToken apiToken = null;
-        try {
-            apiToken = tokenRepository.findByToken(tokenValue).orElse(null);
-        } catch(DataAccessException dbEx) {
-            response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-            response.getWriter().write("Auth DB unavailable");
-            return;
-        }
+        ApiToken apiToken = tokenRepository.findByToken(tokenValue).orElse(null);
         if (apiToken == null) {
-            reject(response);
+            reject();
             return;
         }
 
@@ -65,8 +59,7 @@ public class AuthFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private void reject(@NonNull HttpServletResponse response) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.getWriter().write("Invalid or missing token");
+    private void reject() {
+        throw new UnauthorizedException("Missing or invalid Authorization Token");
     }
 }

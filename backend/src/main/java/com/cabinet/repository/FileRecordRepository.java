@@ -10,4 +10,5 @@ import java.util.List;
 public interface FileRecordRepository extends JpaRepository<FileRecord, Long> {
     List<FileRecord> findByUserId(Long userId);
     void deleteByUserIdAndName(Long userId, String name);
+    FileRecord findByUserIdAndName(Long userId, String name);
 }

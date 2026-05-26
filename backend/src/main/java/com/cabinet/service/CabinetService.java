@@ -2,6 +2,8 @@ package com.cabinet.service;
 
 import com.cabinet.entity.FileRecord;
 import com.cabinet.entity.User;
+import com.cabinet.exception.ItemNotFoundException;
+import com.cabinet.exception.StorageException;
 import com.cabinet.model.InsertResponse;
 import com.cabinet.repository.FileRecordRepository;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class CabinetService {
         this.fileService = fileService;
     }
 
+    @Transactional
     public InsertResponse insert(User user, String fileName, byte[] bytes) {
         List<FileRecord> userRecords = repository.findByUserId(user.getId());
 
@@ -34,11 +37,21 @@ public class CabinetService {
                 .findFirst()
                 .orElse(null);
 
-        return saveOrUpdate(user, fileName, bytes, md5, existing);
+        if (existing != null) {
+            return updateFile(user, fileName, bytes, md5, existing);
+        }
+
+        FileRecord fileRecord = createRecord(user, fileName, bytes.length, md5);
+        repository.save(fileRecord);
+        fileService.saveFile(user.getUsername(), fileName, bytes);
+        return new InsertResponse(fileName, bytes.length, md5);
     }
 
     @Transactional 
     public byte[] grab(User user, String fileName) {
+        if (repository.findByUserIdAndName(user.getId(), fileName) == null) {
+            throw new ItemNotFoundException(fileName);
+        }
         return fileService.readFile(user.getUsername(), fileName);
     }
 
@@ -47,9 +60,12 @@ public class CabinetService {
     }
 
     @Transactional 
-    public void delete(User user, String name) {
-        fileService.deleteFile(user.getUsername(), name);
-        repository.deleteByUserIdAndName(user.getId(), name);
+    public void delete(User user, String fileName) {
+        if (repository.findByUserIdAndName(user.getId(), fileName) == null) {
+            throw new ItemNotFoundException(fileName);
+        }
+        repository.deleteByUserIdAndName(user.getId(), fileName);
+        fileService.deleteFile(user.getUsername(), fileName);
     }
 
     private String computeMd5(byte[] bytes) {
@@ -66,37 +82,20 @@ public class CabinetService {
         return new FileRecord(user, name, size, md5);
     }
 
-    private InsertResponse saveOrUpdate(User user, String fileName, byte[] bytes, String md5, FileRecord existing) {
-        if (existing != null) {
-            if (md5.equals(existing.getMd5())) {
-                existing.setUpdatedAt(Instant.now());
-                repository.save(existing);
-                return new InsertResponse(fileName, existing.getSizeBytes(), existing.getMd5());
-            }
-
-            fileService.saveFile(user.getUsername(), fileName, bytes);
-            existing.setMd5(md5);
-            existing.setSizeBytes(bytes.length);
+    @Transactional
+    private InsertResponse updateFile(User user, String fileName, byte[] bytes, String md5, FileRecord existing) {
+        if (md5.equals(existing.getMd5())) {
             existing.setUpdatedAt(Instant.now());
-            try {
-                repository.save(existing);
-            } catch (RuntimeException e) {
-                try
-                { fileService.deleteFile(user.getUsername(), fileName);
-                } catch (Exception ignore) {}
-                throw e;
-            }
-            return new InsertResponse(fileName, bytes.length, md5);
+            repository.save(existing);
+            return new InsertResponse(fileName, existing.getSizeBytes(), existing.getMd5());
         }
 
-        FileRecord fileRecord = createRecord(user, fileName, bytes.length, md5);
+        existing.setMd5(md5);
+        existing.setSizeBytes(bytes.length);
+        existing.setUpdatedAt(Instant.now());
+        repository.save(existing);
         fileService.saveFile(user.getUsername(), fileName, bytes);
-        try {
-            repository.save(fileRecord);
-        } catch (RuntimeException e) {
-            try { fileService.deleteFile(user.getUsername(), fileName); } catch (Exception ignore) {}
-            throw e;
-        }
+
         return new InsertResponse(fileName, bytes.length, md5);
     }
 }
