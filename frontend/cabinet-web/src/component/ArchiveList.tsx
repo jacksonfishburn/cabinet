@@ -4,16 +4,20 @@ import type { ArchiveListProps } from "../types"
 
 const ArchiveList = ({ names, onSelect, onUpload, isUploading = false }: ArchiveListProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderPickerProps = {
+    webkitdirectory: "",
+    multiple: true,
+  } as Record<string, string | boolean>;
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
+    const files = Array.from(event.currentTarget.files ?? []);
     event.currentTarget.value = "";
 
-    if (!file) {
+    if (files.length === 0) {
       return;
     }
 
-    await onUpload(file);
+    await onUpload(files);
   };
 
   return (
@@ -43,12 +47,13 @@ const ArchiveList = ({ names, onSelect, onUpload, isUploading = false }: Archive
                 disabled={isUploading}
                 className="border border-dashed border-amber-900 bg-amber-100 px-4 py-2 font-mono text-sm tracking-wide text-amber-900 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isUploading ? "Uploading..." : "Insert"}
+                {isUploading ? "Uploading..." : "Upload Folder"}
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
+                {...folderPickerProps}
                 onChange={handleFileChange}
                 disabled={isUploading}
                 aria-hidden="true"

@@ -1,13 +1,24 @@
 import { useState, useEffect } from "react";
 import type { FileRecord } from "../types";
-import { deleteItem, grab, insert, peek } from "../api";
+import { ApiError, deleteItem, grab, insert, peek } from "../api";
 import JSZip from "jszip";
+import { useAuth } from "./useAuth";
 
 
 export function useFiles() {
+  const { clearSession } = useAuth();
   const [files, setFiles] = useState<Record<string, FileRecord>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleAuthFailure = (err: unknown) => {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      clearSession();
+      return true;
+    }
+
+    return false;
+  };
 
   const refresh = async () => {
     try {
@@ -16,6 +27,7 @@ export function useFiles() {
       setFiles(data);
     } catch (err) {
       setFiles({});
+      handleAuthFailure(err);
       setError(err instanceof Error ? err.message : "Failed to load files");
     }
   };
@@ -30,29 +42,44 @@ export function useFiles() {
       await deleteItem(name);
       await refresh();
     } catch (err) {
+      handleAuthFailure(err);
       setError(err instanceof Error ? err.message : `Failed to delete '${name}'`);
     }
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (files: File[]) => {
     try {
       setError(null);
-      const bytes = new Uint8Array(await file.arrayBuffer());
       const archive = new JSZip();
-      archive.file(file.name, bytes, {
-        date: new Date(file.lastModified),
-        binary: true,
-      });
+
+      const uploadRoot = files.length > 0
+        ? files[0].webkitRelativePath.split("/").filter(Boolean)[0] ?? ""
+        : "";
+
+      for (const file of files) {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const relativePath = file.webkitRelativePath || file.name;
+        const archivePath = uploadRoot && relativePath.startsWith(`${uploadRoot}/`)
+          ? relativePath.slice(uploadRoot.length + 1)
+          : relativePath;
+
+        archive.file(archivePath, bytes, {
+          date: new Date(file.lastModified),
+          binary: true,
+        });
+      }
 
       const zipBlob = await archive.generateAsync({
         type: "blob",
         compression: "STORE",
       });
 
-      await insert(file.name, zipBlob);
+      const archiveName = uploadRoot || files[0].name;
+      await insert(archiveName, zipBlob);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to upload '${file.name}'`);
+      handleAuthFailure(err);
+      setError(err instanceof Error ? err.message : "Failed to upload folder");
     }
   };
 
@@ -75,6 +102,7 @@ export function useFiles() {
         lastModified: entry.date?.getTime() ?? Date.now(),
       });
     } catch (err) {
+      handleAuthFailure(err);
       setError(err instanceof Error ? err.message : `Failed to grab '${name}'`);
       throw err;
     }

@@ -3,6 +3,7 @@ import type { AuthRequest, AuthResponse } from "../types";
 import { clearToken, getToken, login, logout, register, setToken } from "../api";
 
 type AuthUser = Pick<AuthResponse, "id" | "username">;
+const AUTH_SESSION_KEY = "cabinet.auth-session";
 
 export interface AuthContextValue {
   token: string | null;
@@ -25,8 +26,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedToken = getToken();
+    const storedSession = localStorage.getItem(AUTH_SESSION_KEY);
 
-    if (storedToken) {
+    if (storedSession) {
+      try {
+        const parsedSession = JSON.parse(storedSession) as { token?: string; user?: AuthUser };
+
+        if (parsedSession.token) {
+          setTokenState(parsedSession.token);
+        } else if (storedToken) {
+          setTokenState(storedToken);
+        }
+
+        if (parsedSession.user) {
+          setUser(parsedSession.user);
+        }
+      } catch {
+        if (storedToken) {
+          setTokenState(storedToken);
+        }
+      }
+    } else if (storedToken) {
       setTokenState(storedToken);
     }
 
@@ -34,13 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSession = (response: AuthResponse) => {
+    const nextUser = { id: response.id, username: response.username };
     setToken(response.token);
     setTokenState(response.token);
-    setUser({ id: response.id, username: response.username });
+    setUser(nextUser);
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ token: response.token, user: nextUser }));
   };
 
   const clearSession = () => {
     clearToken();
+    localStorage.removeItem(AUTH_SESSION_KEY);
     setTokenState(null);
     setUser(null);
   };
