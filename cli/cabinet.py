@@ -9,6 +9,7 @@ from pathlib import Path
 CONFIG_PATH = Path.home() / ".cabinet" / "config.json"
 AUTH_BASE_PATH = "/auth"
 
+# Configs
 def load_config():
     if not CONFIG_PATH.exists():
         return {}
@@ -54,6 +55,8 @@ def config():
 
     return url, headers
 
+
+# Helpers
 def get_cwd():
     return os.getcwd()
 
@@ -67,6 +70,42 @@ def zip_and_prepare(dir_path):
                 zip_file.write(full_path, arcname=arcname)
     return zip_buffer.getvalue()
 
+def print_file_table(records):
+    def fmt_size(b):
+        if b >= 1_000_000:
+            return f"{b / 1_000_000:.1f} MB"
+        elif b >= 1_000:
+            return f"{b / 1_000:.1f} KB"
+        return f"{b} B"
+
+    def fmt_date(iso):
+        return iso.replace("T", " ")[:19]
+
+    headers = ["Name", "Size", "MD5", "Created", "Updated"]
+    rows = [
+        [
+            r["name"],
+            fmt_size(r["sizeBytes"]),
+            r["md5"][:8] + "...",
+            fmt_date(r["createdAt"]),
+            fmt_date(r["updatedAt"]),
+        ]
+        for r in records
+    ]
+
+    col_widths = [max(len(h), max(len(row[i]) for row in rows)) for i, h in enumerate(headers)]
+
+    def fmt_row(cells):
+        return "  ".join(c.ljust(w) for c, w in zip(cells, col_widths))
+
+    divider = "  ".join("-" * w for w in col_widths)
+
+    print(fmt_row(headers))
+    print(divider)
+    for row in rows:
+        print(fmt_row(row))
+
+# auth
 def auth_request(method, path, username=None, password=None):
     url = get_server_url()
     payload = {
@@ -87,11 +126,10 @@ def register(username, password):
         if token:
             save_token_to_config(token)
 
-        print(f"Successfully registered '{username}'")
-        print(json.dumps(data, indent=2))
+        print(f"'{username}' registered")
     else:
         print(f"Error registering '{username}': {response.status_code}")
-        print(response.text)
+        print(response.json())
 
 def login(username, password):
     response = auth_request("GET", f"{AUTH_BASE_PATH}/login", username, password)
@@ -103,11 +141,10 @@ def login(username, password):
         if token:
             save_token_to_config(token)
 
-        print(f"Successfully logged in as '{username}'")
-        print(json.dumps(data, indent=2))
+        print(f"'{username}' logged in")
     else:
         print(f"Error logging in as '{username}': {response.status_code}")
-        print(response.text)
+        print(response.json())
 
 def logout():
     url, headers = config()
@@ -121,11 +158,13 @@ def logout():
 
     if response.status_code in (200, 204):
         clear_token_from_config()
-        print("Successfully logged out")
+        print("Logged out")
     else:
         print(f"Error logging out: {response.status_code}")
-        print(response.text)
+        print(response.json())
 
+
+# cabinet operations
 def insert(name):
     url, headers = config()
     cwd = get_cwd()
@@ -135,11 +174,10 @@ def insert(name):
     response = requests.post(f"{url}/{name}", data=zip_bytes, headers=headers)
     
     if response.status_code == 200:
-        print(f"Successfully inserted '{name}'")
-        print(response.json())
+        print(f"'{name}' inserted")
     else:
         print(f"Error inserting '{name}': {response.status_code}")
-        print(response.text)
+        print(response.json())
 
 def grab(name):
     url, headers = config()
@@ -155,7 +193,7 @@ def grab(name):
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zip_file:
             zip_file.extractall(folder_path)
         
-        print(f"Successfully grabbed '{name}'")
+        print(f"'{name}' grabbed")
     else:
         print(f"Error grabbing '{name}': {response.status_code}")
         print(response.text)
@@ -166,8 +204,7 @@ def peek():
     response = requests.get(f"{url}/peek", headers=headers)
     
     if response.status_code == 200:
-        print("Cabinet contents:")
-        print(json.dumps(response.json(), indent=2))
+        print_file_table(response.json())
     else:
         print(f"Error peeking: {response.status_code}")
         print(response.text)
@@ -178,16 +215,17 @@ def delete(name):
     response = requests.delete(f"{url}/{name}", headers=headers)
     
     if response.status_code == 204:
-        print(f"Successfully deleted '{name}'")
+        print(f"'{name}' deleted")
     else:
         print(f"Error deleting '{name}': {response.status_code}")
-        print(response.text)
+        print(response.json())
 
 
+# Main CLI handling
 def main():
     if len(sys.argv) < 2:
         print("Usage: cabinet <command> [name]")
-        print("Commands: insert, grab, peek, delete, register, login, logout")
+        print("Commands:\n insert \n grab \n peek \n delete \n register \n login \n logout \n")
         sys.exit(1)
 
     command = sys.argv[1]
