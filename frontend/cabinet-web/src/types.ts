@@ -19,3 +19,14 @@ export interface ArchiveListProps {
   onUpload: (file: File) => Promise<void>
   isUploading?: boolean
 }
+
+export interface AuthRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  id: number;
+  username: string;
+  token: string;
+}
