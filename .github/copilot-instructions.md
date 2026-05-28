@@ -1,187 +1,116 @@
 # Cabinet
 
-Cabinet is a personal file-sync tool — a lightweight alternative to Dropbox or a simplified Git — built for moving directories between machines. You point it at a folder, it zips it and pushes it to your server. Pull it back anywhere. 
+## What Cabinet is
 
-Built as both a personal utility and a learning project, Cabinet is self-hosted and designed to be straightforward to run. A demo/test mode is planned so visitors can explore the interface without actually uploading files.
+Cabinet is a self-hosted personal file-sync tool. You point it at a folder, it zips it and pushes it to a server. Pull it back anywhere. Think lightweight Dropbox or simplified Git — for one person, self-hosted on a VPS.
 
----
+It is also a learning project, so code quality and understanding the "why" matter, not just getting things working.
 
-## Architecture Overview
+## Stack
 
-Cabinet has three main components: a Spring Boot REST API backend, a PostgreSQL database, and a React frontend — all containerized with Docker. A Python CLI provides the primary day-to-day interface.
+- **Backend:** Spring Boot 4 REST API (Java), running in Docker
+- **Database:** PostgreSQL, running in Docker
+- **Frontend:** React + TypeScript + Vite — mostly deprioritized, don't focus here
+- **CLI:** Python script (`cabinet.py`), shell function installed in `~/.bashrc`
 
-```
-┌─────────────────┐     HTTP      ┌──────────────────────────┐
-│   Python CLI    │ ────────────► │   Spring Boot REST API   │
-└─────────────────┘               │        (Docker)          │
-                                  └────────────┬─────────────┘
-┌─────────────────┐     HTTP               ▼
-│  React Frontend │ ────────────►  ┌───────────────────┐    ┌────────────────────┐
-│    (Docker)     │               │   PostgreSQL DB    │    │  cabinet-storage/  │
-└─────────────────┘               │    (Docker)        │    │  (flat .zip files) │
-                                  └───────────────────┘    └────────────────────┘
-```
+## What's already built
 
----
+### Backend API
 
-## Backend
-
-A Spring Boot 3 REST API running on a VPS behind Docker. Handles file storage, user authentication, and all business logic.
-
-### API Endpoints
+All endpoints are working:
 
 |Method|Route|Auth|Description|
 |---|---|---|---|
-|GET|`/api/ping`|❌|Health check, returns `true`|
-|GET|`/api/peek`|✅|List all stored items for your account|
-|POST|`/api/{name}`|✅|Upload a zip (raw bytes in body)|
-|GET|`/api/{name}`|✅|Download a zip|
-|DELETE|`/api/{name}`|✅|Delete an item|
-|POST|`/api/auth/register`|❌|Create an account, returns a token|
-|GET|`/api/auth/login`|❌|Verify credentials, returns a token|
-|DELETE|`/api/auth/logout`|✅|Revoke the current token|
+|GET|`/api/ping`|No|Health check|
+|GET|`/api/peek`|Yes|List all stored items for the current user|
+|POST|`/api/{name}`|Yes|Upload a zip (raw bytes in body)|
+|GET|`/api/{name}`|Yes|Download a zip|
+|DELETE|`/api/{name}`|Yes|Delete an item|
+|POST|`/api/auth/register`|No|Create account, returns token|
+|GET|`/api/auth/login`|No|Verify credentials, returns token|
+|DELETE|`/api/auth/logout`|Yes|Revoke current token|
 
-### Authentication
+### Authentication (current — token-based, not JWT)
 
-Every request except `/api/ping` and the `/api/auth/*` routes requires a Bearer token:
+- Bearer token auth on all protected routes: `Authorization: Bearer <token>`
+- Tokens stored in the `api_tokens` table with `created_at`, `expires_at`, `revoked` columns
+- Spring Security filter validates token on every request by hitting the database
+- Passwords hashed with bcrypt
 
-```
-Authorization: Bearer <token>
-```
+### File storage
 
-Tokens are stored in the database with `created_at`, `expires_at`, and `revoked` columns. A Spring Security filter validates the token on every protected request. Passwords are hashed with bcrypt.
+- Zips stored at `cabinet-storage/{username}/{name}.zip`
+- Metadata (size, MD5, timestamps) in PostgreSQL `file_records` table
+- Uploading to an existing name overwrites and updates `updated_at` and `md5`
+- Upload size limit configurable via env var, default ~100 MB
 
-### File Storage
+### Database schema
 
-Files are stored as `.zip` archives under `cabinet-storage/{username}/{name}.zip`, giving each user their own isolated directory. Metadata (size, MD5 hash, timestamps) is persisted in PostgreSQL. Uploading to an existing name overwrites the file and updates `updated_at` and `md5` in the database.
+**users:** `id`, `username` (unique), `password_hash`
 
-**Upload limit:** configurable via environment variable (default ~100 MB).
+**api_tokens:** `id`, `token`, `created_at`, `expires_at`, `revoked`, `user_id`
 
-### Response Shapes
+**file_records:** `id`, `name`, `size_bytes`, `md5`, `created_at`, `updated_at`, `user_id`
 
-**`GET /api/peek`** — returns a list of FileRecords:
+### CLI
 
-json
+Python script with these commands:
 
-```json
-[
-  {
-    "name": "my-project",
-    "sizeBytes": 204800,
-    "md5": "a1b2c3d4...",
-    "createdAt": "2025-05-01T12:00:00",
-    "updatedAt": "2025-05-01T14:30:00"
-  }
-]
-```
+- `cabinet insert <name>` — zip current dir and upload
+- `cabinet fetch <name>` — download and unzip to current dir
+- `cabinet peek` — list stored items
+- `cabinet delete <name>` — delete a stored item
+- `cabinet login <name> <password>` — log in, saves token to config
+- `cabinet register <name> <password>` — create account, saves token to config
 
-**`POST /api/{name}`** — body is raw zip bytes (`application/octet-stream`), returns the FileRecord for the inserted item.
+Config lives at `~/.cabinet/config.json` with `serverUrl` and `token`.
 
-**`GET /api/{name}`** — returns raw zip bytes (`application/octet-stream`).
+### Frontend
 
-**`DELETE /api/{name}`** — returns 200 on success
+React + TypeScript + Vite. Has a working UI for browse/upload/download/delete and a login/register screen. **Not a priority — don't spend time on this unless asked.**
 
----
+### Docker
 
-## Database
+Backend and database are containerized in `docker-compose.yml`. Frontend is not yet dockerized.
 
-PostgreSQL, running as a second Docker service alongside the API.
+### Error handling
 
-### Schema
-
-**`users`**
-
-|Column|Type|Notes|
-|---|---|---|
-|`id`|serial|Primary key|
-|`username`|text|Unique|
-|`password_hash`|text|bcrypt|
-
-**`api_tokens`**
-
-|Column|Type|Notes|
-|---|---|---|
-|`id`|serial|Primary key|
-|`token`|text|Unique|
-|`created_at`|timestamp||
-|`expires_at`|timestamp||
-|`revoked`|boolean||
-|`user_id`|FK|Many-to-one → `users`|
-
-**`file_records`**
-
-|Column|Type|Notes|
-|---|---|---|
-|`id`|serial|Primary key|
-|`name`|text|Key used to store/retrieve|
-|`size_bytes`|bigint||
-|`md5`|text||
-|`created_at`|timestamp||
-|`updated_at`|timestamp||
-|`user_id`|FK|Many-to-one → `users`|
+Improved error handling is in place across the CLI and backend.
 
 ---
 
-## Docker Setup
+## Roadmap — what to build next (in order)
 
-The backend and database run as separate services defined in `docker-compose.yml`. The React frontend will be added as a third service once its Dockerfile is written.
+### 1. JWT Auth (next up)
 
-```
-services:
-  backend  — Spring Boot app
-  db       — PostgreSQL
-  frontend — React/Vite (planned)
-```
+Replace the current database-backed token system with JWTs. Goals:
 
----
+- Stateless auth — no DB lookup on every request
+- Tokens self-contained with expiry, user info, etc.
+- Keep the same API surface (Bearer token in header)
+- The `api_tokens` table and logout endpoint may need rethinking — JWTs can't be truly revoked without a denylist, decide on the right tradeoff
 
-## CLI
+### 2. Testing and logging
 
-A Python script (`cabinet.py`) that wraps the REST API and provides a shell-friendly interface. Installed as a shell function in `~/.bashrc`, which calls the script and forwards all arguments.
+- Unit and integration tests for the backend (Spring Boot — use JUnit + Mockito, Spring Boot Test)
+- Make Test Containers and setup testing environment for test driven development moving forward
+- just set up some type of logging for debugging moving forward
 
-**Configuration** lives in `~/.cabinet/config.json`:
+### 3. Caching for auth and peek
 
-```json
-{
-  "serverUrl": "https://your-vps.example.com",
-  "token": "your-api-token"
-}
-```
+- Cache token validation results so repeated requests don't hit the DB every time (especially relevant before JWT, but may still be useful after)
+- Cache the `GET /api/peek` response per user — invalidate on upload/delete
+- Consider Spring Cache abstraction with a simple in-memory store (Caffeine) first before reaching for Redis
 
-**Commands:**
+### 4. Shared cabinets
 
-|Command|Description|
-|---|---|
-|`cabinet insert <name>`|Zips the current directory and uploads it|
-|`cabinet fetch <name>`|Downloads and unzips to the current directory|
-|`cabinet peek`|Lists all your stored items|
-|`cabinet delete <name>`|Deletes a stored item|
+- Allow a user to share a named cabinet item with another user (read-only or read-write)
+- New DB table needed: something like `shares` with `owner_user_id`, `target_user_id`, `file_record_id`, `permission`
+- API endpoints TBD — think through what makes sense
+- CLI commands TBD
 
-> **Note:** Login/register support is not yet wired into the CLI. For now, the token is set manually in the config file.
+## General guidance
 
----
-
-## Frontend (GUI)
-
-A React + TypeScript frontend built with Vite. Currently functional for browsing, uploading, downloading, and deleting files, with a polished UI. Will be containerized in its own Docker service.
-
-**Planned additions:**
-
-- Login / register screen
-- CLI download page
-
-> **Note:** Auth is not yet integrated into the frontend.
-
----
-
-## Roadmap
-
-- [ ] Wire auth into the CLI (login/register commands, auto-save token to config)
-- [ ] Improve Error Handling
-- [ ] Add login/register screen to the React frontend
-- [ ] Dockerize the frontend
-- [ ] Deploy
-- [ ] CLI download page on the frontend
-- [ ] Demo / test mode (explore the UI without uploading real files)
-- [ ] Rate limiting or upload quotas to protect the server
-- [ ] Per-user file namespacing (currently files are global by name)
+- This is a learning project
+- Prefer simple and clear over clever
+- add only the parts I tell you to, work on piece of code at a time
