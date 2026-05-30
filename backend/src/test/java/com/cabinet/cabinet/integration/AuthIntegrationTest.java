@@ -10,19 +10,19 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.hamcrest.Matchers.matchesRegex;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @Testcontainers
 class AuthIntegrationTest {
@@ -40,6 +40,8 @@ class AuthIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
@@ -51,7 +53,7 @@ class AuthIntegrationTest {
     void register_validRequest_returns200AndNonEmptyToken() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("alice", "password123"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("alice", "password123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("alice"))
                 .andExpect(jsonPath("$.token", matchesRegex(".+")));
@@ -62,12 +64,12 @@ class AuthIntegrationTest {
     void register_duplicateUsername_returns409() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("alice", "password123"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("alice", "password123"))))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("alice", "another-password"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("alice", "another-password"))))
                 .andExpect(status().isConflict());
     }
 
@@ -76,7 +78,7 @@ class AuthIntegrationTest {
     void register_missingUsername_returns400() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest(null, "password123"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest(null, "password123"))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -85,7 +87,7 @@ class AuthIntegrationTest {
     void register_missingPassword_returns400() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("alice", null))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("alice", null))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -94,12 +96,12 @@ class AuthIntegrationTest {
     void login_validCredentials_returns200AndNonEmptyToken() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("bob", "password123"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("bob", "password123"))))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("bob", "password123"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("bob", "password123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("bob"))
                 .andExpect(jsonPath("$.token", matchesRegex(".+")));
@@ -110,41 +112,30 @@ class AuthIntegrationTest {
     void login_wrongPassword_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("carol", "password123"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("carol", "password123"))))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("carol", "wrong-password"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("carol", "wrong-password"))))
                 .andExpect(status().isUnauthorized());
     }
 
     // Verifies login returns 401 when username does not exist.
     @Test
     void login_usernameDoesNotExist_returns401() throws Exception {
-        mockMvc.perform(get("/api/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(APPLICATION_JSON)
-                        .content(json(new AuthRequest("missing-user", "password123"))))
+                        .content(objectMapper.writeValueAsString(new AuthRequest("missing-user", "password123"))))
                 .andExpect(status().isUnauthorized());
     }
 
     // Verifies login returns 400 when credentials are missing.
     @Test
     void login_missingCredentials_returns400() throws Exception {
-        mockMvc.perform(get("/api/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
-    }
-
-    private String json(AuthRequest request) throws Exception {
-        return "{\"username\":" + quoted(request.username()) + ",\"password\":" + quoted(request.password()) + "}";
-    }
-
-    private String quoted(String value) {
-        if (value == null) {
-            return "null";
-        }
-        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 }

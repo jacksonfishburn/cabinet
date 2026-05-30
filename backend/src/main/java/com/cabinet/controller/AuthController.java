@@ -26,11 +26,6 @@ public class AuthController {
         return authService.login(request);
     }
 
-    @GetMapping("/login")
-    public AuthResponse login(@Valid @RequestBody AuthRequest request) {
-        return authService.login(request);
-    }
-
     @DeleteMapping("/logout")
     public void logout(@RequestHeader("Authorization") String header) {
         if (header == null || !header.startsWith("Bearer ")) {
