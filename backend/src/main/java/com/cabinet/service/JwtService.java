@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 
@@ -21,18 +22,21 @@ public class JwtService {
 
 	private final String secretValue;
 	private final long expirationMs;
+	private final Clock clock;
 	private SecretKey signingKey;
 
 	public JwtService(
 			@Value("${jwt.secret}") String secretValue,
-			@Value("${jwt.expiration-ms}") long expirationMs
+			@Value("${jwt.expiration-ms}") long expirationMs,
+			Clock clock
 	) {
 		this.secretValue = secretValue;
 		this.expirationMs = expirationMs;
+		this.clock = clock;
 	}
 
 	@PostConstruct
-	void initialize() {
+	public void initialize() {
 		byte[] keyBytes = decodeSecret(secretValue);
 		if (keyBytes.length < 32) {
 			throw new IllegalArgumentException("jwt.secret must resolve to at least 32 bytes for HS256");
@@ -41,7 +45,7 @@ public class JwtService {
 	}
 
 	public String generateToken(User user) {
-		Instant now = Instant.now();
+		Instant now = Instant.now(clock);
 		Instant expiresAt = now.plusMillis(expirationMs);
 
 		return Jwts.builder()
@@ -78,7 +82,7 @@ public class JwtService {
 			return user != null
 					&& user.getUsername().equals(claims.getSubject())
 					&& claims.getExpiration() != null
-					&& claims.getExpiration().toInstant().isAfter(Instant.now());
+					&& claims.getExpiration().toInstant().isAfter(Instant.now(clock));
 		} catch (UnauthorizedException | JwtException | IllegalArgumentException ex) {
 			return false;
 		}
@@ -87,6 +91,7 @@ public class JwtService {
 	private Claims getClaims(String token) {
 		try {
 			return Jwts.parser()
+					.setClock(() -> Date.from(Instant.now(clock)))
 					.verifyWith(signingKey)
 					.build()
 					.parseSignedClaims(normalizeToken(token))
@@ -106,7 +111,9 @@ public class JwtService {
 	private byte[] decodeSecret(String secret) {
 		try {
 			return Decoders.BASE64.decode(secret);
-		} catch (IllegalArgumentException ex) {
+		} catch (Exception ex) {
+			// Some decoder implementations throw different runtime exceptions (e.g. DecodingException).
+			// Fall back to interpreting the configured secret as raw UTF-8 bytes.
 			return secret.getBytes(StandardCharsets.UTF_8);
 		}
 	}

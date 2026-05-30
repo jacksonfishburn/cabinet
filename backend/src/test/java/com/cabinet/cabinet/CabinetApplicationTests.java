@@ -20,5 +20,4 @@ class CabinetApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }
