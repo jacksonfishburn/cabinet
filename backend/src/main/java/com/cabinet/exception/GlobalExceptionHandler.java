@@ -4,6 +4,7 @@ import com.cabinet.model.ExceptionResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,6 +31,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidFileException.class)
     public ResponseEntity<ExceptionResponse> handleInvalidFile(InvalidFileException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ExceptionResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ExceptionResponse> handleValidation(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .filter(msg -> msg != null && !msg.isBlank())
+                .findFirst()
+                .orElse("Invalid request body");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ExceptionResponse(message));
     }
 
     @ExceptionHandler(FileTooLargeException.class)

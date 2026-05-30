@@ -1,6 +1,8 @@
 package com.cabinet.config;
 
 import com.cabinet.filter.AuthFilter;
+import com.cabinet.repository.UserRepository;
+import com.cabinet.service.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import java.time.Clock;
@@ -14,14 +16,18 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
-    private final AuthFilter authFilter;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    public SecurityConfig(AuthFilter authFilter) {
-        this.authFilter = authFilter;
+
+    public SecurityConfig(JwtService jwtService, UserRepository userRepository) {
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        AuthFilter authFilter = new AuthFilter(jwtService, userRepository);
         return http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -36,10 +42,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public Clock systemClock() {
-        return Clock.systemUTC();
     }
 }
