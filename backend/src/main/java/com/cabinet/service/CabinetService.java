@@ -3,9 +3,10 @@ package com.cabinet.service;
 import com.cabinet.entity.FileRecord;
 import com.cabinet.entity.User;
 import com.cabinet.exception.ItemNotFoundException;
-import com.cabinet.exception.StorageException;
 import com.cabinet.model.InsertResponse;
 import com.cabinet.repository.FileRecordRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class CabinetService {
     }
 
     @Transactional
+    @CacheEvict(value = "peek", key = "#user.id")
     public InsertResponse insert(User user, String fileName, byte[] bytes) {
         List<FileRecord> userRecords = repository.findByUserId(user.getId());
 
@@ -55,11 +57,13 @@ public class CabinetService {
         return fileService.readFile(user.getUsername(), fileName);
     }
 
+    @Cacheable(value = "peek", key = "#user.id")
     public List<FileRecord> peek(User user) {
         return repository.findByUserId(user.getId());
     }
 
-    @Transactional 
+    @Transactional
+    @CacheEvict(value = "peek", key = "#user.id")
     public void delete(User user, String fileName) {
         if (repository.findByUserIdAndName(user.getId(), fileName) == null) {
             throw new ItemNotFoundException(fileName);
