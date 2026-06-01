@@ -11,8 +11,12 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRATION_MS=${JWT_EXPIRATION_MS}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT}
     depends_on:
         postgres:
+          condition: service_healthy
+        redis:
           condition: service_healthy
     volumes:
       - cabinet-storage:${CABINET_STORAGE_DIR}
@@ -37,6 +41,22 @@ services:
       retries: 5
     restart: unless-stopped
 
+
+  redis:
+    image: redis:7-alpine
+    env_file:
+      - .env
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   frontend:
     build: ./frontend/cabinet-web
     ports:
@@ -47,3 +67,4 @@ services:
 volumes:
   cabinet-storage:
   postgres_data:
+  redis_data:
