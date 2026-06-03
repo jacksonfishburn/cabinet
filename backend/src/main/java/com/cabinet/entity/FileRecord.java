@@ -10,8 +10,8 @@ public class FileRecord {
 
     public FileRecord() {}
 
-    public FileRecord(User user, String name, long sizeBytes, String md5) {
-        this.user = user;
+    public FileRecord(Cabinet cabinet, String name, long sizeBytes, String md5) {
+        this.cabinet = cabinet;
         this.name = name;
         this.sizeBytes = sizeBytes;
         this.md5 = md5;
@@ -33,8 +33,8 @@ public class FileRecord {
 
     @JsonIgnore
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "cabinet_id", nullable = false)
+    private Cabinet cabinet;
 
     public Long getId() {
         return id;
@@ -84,11 +84,11 @@ public class FileRecord {
         this.updatedAt = updatedAt;
     }
 
-    public User getUser() {
-        return user;
+    public Cabinet getCabinet() {
+        return cabinet;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setCabinet(Cabinet cabinet) {
+        this.cabinet = cabinet;
     }
 }

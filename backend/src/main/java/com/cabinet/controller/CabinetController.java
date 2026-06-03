@@ -25,31 +25,31 @@ public class CabinetController {
         return true;
     }
 
-    @GetMapping("/peek")
-    public List<FileRecord> peek() {
+    @GetMapping("/{cabinet}/peek")
+    public List<FileRecord> peek(@PathVariable String cabinet) {
         User user = getCurrentUser();
-        return cabinetService.peek(user);
+        return cabinetService.peek(user, cabinet);
     }
 
-    @GetMapping("/{name}")
-    public ResponseEntity<byte[]> grab(@PathVariable String name) {
+    @GetMapping("/{cabinet}/{name}")
+    public ResponseEntity<byte[]> grab(@PathVariable String cabinet, @PathVariable String name) {
         User user = getCurrentUser();
-        byte[] bytes = cabinetService.grab(user, name);
+        byte[] bytes = cabinetService.grab(user, cabinet, name);
         return ResponseEntity.ok()
                 .header("Content-Type", "application/zip")
                 .body(bytes);
     }
 
-    @PostMapping("/{name}")
-    public InsertResponse insert(@PathVariable String name, @RequestBody byte[] bytes) {
+    @PostMapping("/{cabinet}/{name}")
+    public InsertResponse insert(@PathVariable String cabinet, @PathVariable String name, @RequestBody byte[] bytes) {
         User user = getCurrentUser();
-        return cabinetService.insert(user, name, bytes);
+        return cabinetService.insert(user, cabinet, name, bytes);
     }
 
-    @DeleteMapping("/{name}")
-    public ResponseEntity<Void> delete(@PathVariable String name) {
+    @DeleteMapping("/{cabinet}/{name}")
+    public ResponseEntity<Void> delete(@PathVariable String cabinet, @PathVariable String name) {
         User user = getCurrentUser();
-        cabinetService.delete(user, name);
+        cabinetService.delete(user, cabinet, name);
         return ResponseEntity.noContent().build();
     }
 

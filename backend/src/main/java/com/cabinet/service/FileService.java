@@ -28,12 +28,12 @@ public class FileService {
     @Value("${cabinet.max-size-mb}")
     private String maxSize;
 
-    public void saveFile(String username, String fileName, byte[] bytes) {
+    public void saveFile(String dirName, String fileName, byte[] bytes) {
         try {
-            String safeUsername = sanitizePathSegment(username, "username");
+            String safeDirName = sanitizePathSegment(dirName, "dirName");
             String safeFileName = sanitizePathSegment(fileName, "fileName");
 
-            Path storagePath = Paths.get(storageDir, safeUsername);
+            Path storagePath = Paths.get(storageDir, safeDirName);
             Files.createDirectories(storagePath);
 
             Path archivePath = storagePath.resolve(safeFileName + ".zip");
@@ -71,24 +71,24 @@ public class FileService {
         }
     }
 
-     public byte[] readFile(String username, String fileName) {
+     public byte[] readFile(String dirName, String fileName) {
          try {
-             String safeUsername = sanitizePathSegment(username, "username");
+             String safeDirName = sanitizePathSegment(dirName, "dirName");
              String safeFileName = sanitizePathSegment(fileName, "fileName");
 
-             Path archivePath = Paths.get(storageDir, safeUsername, safeFileName + ".zip");
+             Path archivePath = Paths.get(storageDir, safeDirName, safeFileName + ".zip");
              return Files.readAllBytes(archivePath);
          } catch (Exception e) {
              throw new StorageException("No archive found for: " + fileName, e);
          }
      }
 
-     public void deleteFile(String username, String fileName) {
+     public void deleteFile(String dirName, String fileName) {
          try {
-             String safeUsername = sanitizePathSegment(username, "username");
+             String safeDirName = sanitizePathSegment(dirName, "dirName");
              String safeFileName = sanitizePathSegment(fileName, "fileName");
 
-             Path path = Paths.get(storageDir, safeUsername, safeFileName + ".zip");
+             Path path = Paths.get(storageDir, safeDirName, safeFileName + ".zip");
              Files.deleteIfExists(path);
          } catch (Exception e) {
              throw new StorageException("Failed to delete archive for " + fileName, e);

@@ -1,10 +1,13 @@
 package com.cabinet.service;
 
+import com.cabinet.entity.Cabinet;
+import com.cabinet.entity.CabinetMember;
 import com.cabinet.entity.FileRecord;
 import com.cabinet.entity.User;
+import com.cabinet.exception.CabinetNotFoundException;
 import com.cabinet.exception.ItemNotFoundException;
 import com.cabinet.model.InsertResponse;
-import com.cabinet.repository.FileRecordRepository;
+import com.cabinet.repository.CabinetRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -15,61 +18,71 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CabinetService {
-    private final FileRecordRepository repository;
+    private final CabinetRepository repository;
     private final FileService fileService;
 
-    public CabinetService(FileRecordRepository repository, FileService fileService) {
+    public CabinetService(CabinetRepository repository, FileService fileService) {
         this.repository = repository;
         this.fileService = fileService;
     }
 
     @Transactional
-    @CacheEvict(value = "peek", key = "#user.id")
-    public InsertResponse insert(User user, String fileName, byte[] bytes) {
-        List<FileRecord> userRecords = repository.findByUserId(user.getId());
+    @CacheEvict(value = "peek", key = "#user.id + ':' + #cabinetName")
+    public InsertResponse insert(User user, String cabinetName, String fileName, byte[] bytes) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+        List<FileRecord> userRecords = cabinet.getFileRecords();
 
         fileService.validateSizeLimit(userRecords, fileName, bytes);
         String md5 = computeMd5(bytes);
 
-        FileRecord existing = userRecords.stream()
-                .filter(r -> r.getName().equals(fileName))
-                .findFirst()
+        FileRecord existing = getFileRecord(cabinet, fileName)
                 .orElse(null);
 
         if (existing != null) {
-            return updateFile(user, fileName, bytes, md5, existing);
+            InsertResponse response = updateFile(cabinet.getId().toString(), fileName, bytes, md5, existing);
+            repository.save(cabinet);
+            return response;
         }
 
-        FileRecord fileRecord = createRecord(user, fileName, bytes.length, md5);
-        repository.save(fileRecord);
-        fileService.saveFile(user.getUsername(), fileName, bytes);
+        FileRecord fileRecord = createRecord(cabinet, fileName, bytes.length, md5);
+        userRecords.add(fileRecord);
+        repository.save(cabinet);
+        fileService.saveFile(cabinet.getId().toString(), fileName, bytes);
         return new InsertResponse(fileName, bytes.length, md5);
     }
 
     @Transactional 
-    public byte[] grab(User user, String fileName) {
-        if (repository.findByUserIdAndName(user.getId(), fileName) == null) {
-            throw new ItemNotFoundException(fileName);
-        }
-        return fileService.readFile(user.getUsername(), fileName);
+    public byte[] grab(User user, String cabinetName, String fileName) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+
+        getFileRecord(cabinet, fileName)
+                .orElseThrow(() -> new ItemNotFoundException(fileName));
+
+        return fileService.readFile(cabinet.getId().toString(), fileName);
     }
 
-    @Cacheable(value = "peek", key = "#user.id")
-    public List<FileRecord> peek(User user) {
-        return repository.findByUserId(user.getId());
+    @Cacheable(value = "peek", key = "#user.id + ':' + #cabinetName")
+    public List<FileRecord> peek(User user, String cabinetName) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+        return cabinet.getFileRecords();
     }
 
     @Transactional
-    @CacheEvict(value = "peek", key = "#user.id")
-    public void delete(User user, String fileName) {
-        if (repository.findByUserIdAndName(user.getId(), fileName) == null) {
-            throw new ItemNotFoundException(fileName);
-        }
-        repository.deleteByUserIdAndName(user.getId(), fileName);
-        fileService.deleteFile(user.getUsername(), fileName);
+    @CacheEvict(value = "peek", key = "#user.id + ':' + #cabinetName")
+    public void delete(User user, String cabinetName, String fileName) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+        List<FileRecord> userRecords = cabinet.getFileRecords();
+
+        FileRecord existing = getFileRecord(cabinet, fileName)
+                .orElseThrow(() -> new ItemNotFoundException(fileName));
+
+        userRecords.remove(existing);
+        repository.save(cabinet);
+        fileService.deleteFile(cabinet.getId().toString(), fileName);
     }
 
     private String computeMd5(byte[] bytes) {
@@ -82,24 +95,41 @@ public class CabinetService {
         }
     }
 
-    private FileRecord createRecord(User user, String name, int size, String md5) {
-        return new FileRecord(user, name, size, md5);
+    private FileRecord createRecord(Cabinet cabinet, String name, int size, String md5) {
+        return new FileRecord(cabinet, name, size, md5);
     }
 
-    @Transactional
-    private InsertResponse updateFile(User user, String fileName, byte[] bytes, String md5, FileRecord existing) {
+    private InsertResponse updateFile(String cabinetId, String fileName, byte[] bytes, String md5, FileRecord existing) {
         if (md5.equals(existing.getMd5())) {
             existing.setUpdatedAt(Instant.now());
-            repository.save(existing);
             return new InsertResponse(fileName, existing.getSizeBytes(), existing.getMd5());
         }
 
         existing.setMd5(md5);
         existing.setSizeBytes(bytes.length);
         existing.setUpdatedAt(Instant.now());
-        repository.save(existing);
-        fileService.saveFile(user.getUsername(), fileName, bytes);
+        fileService.saveFile(cabinetId, fileName, bytes);
 
         return new InsertResponse(fileName, bytes.length, md5);
+    }
+
+    private Cabinet findCabinetAndVerifyMembership(String cabinetName, User user) {
+        Cabinet cabinet = repository.findByName(cabinetName)
+                .orElseThrow(() -> new CabinetNotFoundException(cabinetName));
+
+        List<CabinetMember> members = cabinet.getMembers();
+        boolean isMember = members.stream()
+                .anyMatch(m -> m.getUser().getId().equals(user.getId()));
+        if (!isMember) {
+            throw new CabinetNotFoundException(cabinetName);
+        }
+
+        return cabinet;
+    }
+
+    private Optional<FileRecord> getFileRecord(Cabinet cabinet, String fileName) {
+        return cabinet.getFileRecords().stream()
+                .filter(r -> r.getName().equals(fileName))
+                .findFirst();
     }
 }

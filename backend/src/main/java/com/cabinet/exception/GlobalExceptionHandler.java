@@ -28,6 +28,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ExceptionResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(CabinetNotFoundException.class)
+    public ResponseEntity<ExceptionResponse> handleCabinetNotFound(CabinetNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ExceptionResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(InvalidFileException.class)
     public ResponseEntity<ExceptionResponse> handleInvalidFile(InvalidFileException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ExceptionResponse(ex.getMessage()));

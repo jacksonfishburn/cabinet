@@ -81,33 +81,66 @@ Improved error handling is in place across the CLI and backend.
 
 ## Roadmap — what to build next (in order)
 
-### 1. JWT Auth (next up)
+### 1. JWT Auth (COMPLETED)
 
 Replace the current database-backed token system with JWTs. Goals:
 
 - Stateless auth — no DB lookup on every request
 - Tokens self-contained with expiry, user info, etc.
 - Keep the same API surface (Bearer token in header)
-- The `api_tokens` table and logout endpoint may need rethinking — JWTs can't be truly revoked without a denylist, decide on the right tradeoff
 
-### 2. Testing and logging
+### 2. Testing (COMPLETED)
 
-- Unit and integration tests for the backend (Spring Boot — use JUnit + Mockito, Spring Boot Test)
-- Make Test Containers and setup testing environment for test driven development moving forward
+- Unit and integration tests for the backend
+- Make Test Containers and setup testing environment for future testing
+- Make unit tests for Auth and File Service and Integration tests for auth endpoints
 - just set up some type of logging for debugging moving forward
 
-### 3. Caching for auth and peek
+### 3. Caching for peek (COMPLETED)
 
-- Cache token validation results so repeated requests don't hit the DB every time (especially relevant before JWT, but may still be useful after)
 - Cache the `GET /api/peek` response per user — invalidate on upload/delete
-- Consider Spring Cache abstraction with a simple in-memory store (Caffeine) first before reaching for Redis
 
-### 4. Shared cabinets
+### 4. Shared cabinets (up next)
 
 - Allow a user to share a named cabinet item with another user (read-only or read-write)
 - New DB table needed: something like `shares` with `owner_user_id`, `target_user_id`, `file_record_id`, `permission`
 - API endpoints TBD — think through what makes sense
 - CLI commands TBD
+
+#### **IN PROGRESS**
+
+made new db schema
+**users**
+- id
+- username
+- passwordHash
+
+
+**file_records**
+- id
+- name
+- size
+- md5
+- created_at
+- updated_at
+- cabinet_id
+
+**cabinets**
+- id
+- name
+
+**cabinet_members**
+- cabinet_id
+- user_id
+
+**invite_codes**
+- id
+- cabinet_id
+- code
+- created_at
+- expires_at
+- used (bool)
+
 
 ## General guidance
 

@@ -2,6 +2,7 @@ package com.cabinet.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,8 +28,8 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<FileRecord> files = new java.util.ArrayList<>();
+    @OneToMany(mappedBy = "user")
+    private List<CabinetMember> memberships = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -54,8 +55,12 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public List<FileRecord> getFiles() {
-        return files;
+    public List<CabinetMember> getMemberships() {
+        return memberships;
+    }
+
+    public void setMemberships(List<CabinetMember> memberships) {
+        this.memberships = memberships;
     }
 
     @Override
