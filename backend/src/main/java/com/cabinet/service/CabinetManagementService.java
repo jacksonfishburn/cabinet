@@ -8,6 +8,8 @@ import com.cabinet.repository.CabinetMemberRepository;
 import com.cabinet.repository.CabinetRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class CabinetManagementService {
 
@@ -28,10 +30,14 @@ public class CabinetManagementService {
     }
 
     public Cabinet getDefaultCabinet(User user) {
+        return cabinetRepository.findByUserIdAndIsDefaultTrue(user.getId())
+                .orElseThrow(CabinetNotFoundException::new);
+    }
+
+    public List<Cabinet> getCabinets(User user) {
         return cabinetMemberRepository.findByUserId(user.getId())
                 .stream()
                 .map(CabinetMember::getCabinet)
-                .findFirst()
-                .orElseThrow(CabinetNotFoundException::new);
+                .toList();
     }
 }

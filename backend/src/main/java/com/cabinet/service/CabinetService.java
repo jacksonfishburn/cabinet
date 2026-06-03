@@ -6,7 +6,9 @@ import com.cabinet.entity.FileRecord;
 import com.cabinet.entity.User;
 import com.cabinet.exception.CabinetNotFoundException;
 import com.cabinet.exception.ItemNotFoundException;
+import com.cabinet.model.CabinetInfo;
 import com.cabinet.model.InsertResponse;
+import com.cabinet.model.ListCabinetsResponse;
 import com.cabinet.repository.CabinetRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,10 +26,14 @@ import java.util.Optional;
 public class CabinetService {
     private final CabinetRepository repository;
     private final FileService fileService;
+    private final CabinetManagementService cabinetManagementService;
 
-    public CabinetService(CabinetRepository repository, FileService fileService) {
+    public CabinetService(CabinetRepository repository,
+                          FileService fileService,
+                          CabinetManagementService cabinetManagementService) {
         this.repository = repository;
         this.fileService = fileService;
+        this.cabinetManagementService = cabinetManagementService;
     }
 
     @Transactional
@@ -83,6 +89,14 @@ public class CabinetService {
         userRecords.remove(existing);
         repository.save(cabinet);
         fileService.deleteFile(cabinet.getId().toString(), fileName);
+    }
+
+    public ListCabinetsResponse listCabinets(User user) {
+        List<Cabinet> cabinets = cabinetManagementService.getCabinets(user);
+        List<CabinetInfo> cabinetInfos = cabinets.stream()
+                .map(c -> new CabinetInfo(c.getId(), c.getName()))
+                .toList();
+        return new ListCabinetsResponse(cabinetInfos);
     }
 
     private String computeMd5(byte[] bytes) {
