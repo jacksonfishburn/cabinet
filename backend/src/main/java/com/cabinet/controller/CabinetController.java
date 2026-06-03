@@ -1,6 +1,7 @@
 package com.cabinet.controller;
 
 import com.cabinet.entity.FileRecord;
+import com.cabinet.entity.InviteCode;
 import com.cabinet.entity.User;
 import com.cabinet.model.CabinetInfo;
 import com.cabinet.model.InsertResponse;
@@ -27,7 +28,7 @@ public class CabinetController {
         return true;
     }
 
-    @GetMapping("/{cabinet}/peek")
+    @GetMapping("/peek/{cabinet}")
     public List<FileRecord> peek(@PathVariable Long cabinet) {
         User user = getCurrentUser();
         return cabinetService.peek(user, cabinet);
@@ -65,6 +66,18 @@ public class CabinetController {
     public CabinetInfo create(@PathVariable String name) {
         User user = getCurrentUser();
         return cabinetService.createCabinet(user, name);
+    }
+
+    @PostMapping("/invite/{cabinet}")
+    public String generateInviteCode(@PathVariable Long cabinet) {
+        User user = getCurrentUser();
+        return cabinetService.generateInviteCode(user, cabinet);
+    }
+
+    @PostMapping("join/{code}")
+    public CabinetInfo join(@PathVariable String code) {
+        User user = getCurrentUser();
+        return cabinetService.join(user, code);
     }
 
     private User getCurrentUser() {

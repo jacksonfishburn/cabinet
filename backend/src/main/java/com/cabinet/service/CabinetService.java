@@ -104,6 +104,17 @@ public class CabinetService {
         return new CabinetInfo(cabinet.getId(), name);
     }
 
+    public String generateInviteCode(User user, Long cabinetId) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
+        return cabinetManagementService.generateInviteCode(cabinet);
+    }
+
+    @Transactional
+    public CabinetInfo join(User user, String code) {
+        Cabinet cabinet = cabinetManagementService.joinCabinet(user, code);
+        return new CabinetInfo(cabinet.getId(), cabinet.getName());
+    }
+
     private String computeMd5(byte[] bytes) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
