@@ -11,9 +11,9 @@ public class Cabinet {
 
     protected Cabinet() {}
 
-    public Cabinet(String name, boolean isPersonal) {
+    public Cabinet(String name, boolean isDefault) {
         this.name = name;
-        this.isPersonal = isPersonal;
+        this.isDefault = isDefault;
     }
 
     @Id
@@ -24,7 +24,7 @@ public class Cabinet {
     private String name;
 
     @Column(nullable = false)
-    private boolean isPersonal;
+    private boolean isDefault;
 
     @OneToMany(mappedBy = "cabinet", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InviteCode> inviteCodes = new ArrayList<>();
@@ -48,11 +48,11 @@ public class Cabinet {
     }
 
     public boolean isPersonal() {
-        return isPersonal;
+        return isDefault;
     }
 
     public void setPersonal(boolean personal) {
-        isPersonal = personal;
+        isDefault = personal;
     }
 
     public List<InviteCode> getInviteCodes() {

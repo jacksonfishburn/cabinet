@@ -32,8 +32,8 @@ public class CabinetService {
 
     @Transactional
     @CacheEvict(value = "peek", key = "#user.id + ':' + #cabinetName")
-    public InsertResponse insert(User user, String cabinetName, String fileName, byte[] bytes) {
-        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+    public InsertResponse insert(User user, Long cabinetId, String fileName, byte[] bytes) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
         List<FileRecord> userRecords = cabinet.getFileRecords();
 
         fileService.validateSizeLimit(userRecords, fileName, bytes);
@@ -56,8 +56,8 @@ public class CabinetService {
     }
 
     @Transactional 
-    public byte[] grab(User user, String cabinetName, String fileName) {
-        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+    public byte[] grab(User user, Long cabinetId, String fileName) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
 
         getFileRecord(cabinet, fileName)
                 .orElseThrow(() -> new ItemNotFoundException(fileName));
@@ -66,15 +66,15 @@ public class CabinetService {
     }
 
     @Cacheable(value = "peek", key = "#user.id + ':' + #cabinetName")
-    public List<FileRecord> peek(User user, String cabinetName) {
-        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+    public List<FileRecord> peek(User user, Long cabinetId) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
         return cabinet.getFileRecords();
     }
 
     @Transactional
     @CacheEvict(value = "peek", key = "#user.id + ':' + #cabinetName")
-    public void delete(User user, String cabinetName, String fileName) {
-        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetName, user);
+    public void delete(User user, Long cabinetId, String fileName) {
+        Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
         List<FileRecord> userRecords = cabinet.getFileRecords();
 
         FileRecord existing = getFileRecord(cabinet, fileName)
@@ -113,15 +113,15 @@ public class CabinetService {
         return new InsertResponse(fileName, bytes.length, md5);
     }
 
-    private Cabinet findCabinetAndVerifyMembership(String cabinetName, User user) {
-        Cabinet cabinet = repository.findByName(cabinetName)
-                .orElseThrow(() -> new CabinetNotFoundException(cabinetName));
+    private Cabinet findCabinetAndVerifyMembership(Long id, User user) {
+        Cabinet cabinet = repository.findById(id)
+                .orElseThrow(CabinetNotFoundException::new);
 
         List<CabinetMember> members = cabinet.getMembers();
         boolean isMember = members.stream()
                 .anyMatch(m -> m.getUser().getId().equals(user.getId()));
         if (!isMember) {
-            throw new CabinetNotFoundException(cabinetName);
+            throw new CabinetNotFoundException();
         }
 
         return cabinet;

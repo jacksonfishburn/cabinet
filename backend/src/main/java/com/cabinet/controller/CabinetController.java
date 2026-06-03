@@ -26,13 +26,13 @@ public class CabinetController {
     }
 
     @GetMapping("/{cabinet}/peek")
-    public List<FileRecord> peek(@PathVariable String cabinet) {
+    public List<FileRecord> peek(@PathVariable Long cabinet) {
         User user = getCurrentUser();
         return cabinetService.peek(user, cabinet);
     }
 
     @GetMapping("/{cabinet}/{name}")
-    public ResponseEntity<byte[]> grab(@PathVariable String cabinet, @PathVariable String name) {
+    public ResponseEntity<byte[]> grab(@PathVariable Long cabinet, @PathVariable String name) {
         User user = getCurrentUser();
         byte[] bytes = cabinetService.grab(user, cabinet, name);
         return ResponseEntity.ok()
@@ -41,13 +41,13 @@ public class CabinetController {
     }
 
     @PostMapping("/{cabinet}/{name}")
-    public InsertResponse insert(@PathVariable String cabinet, @PathVariable String name, @RequestBody byte[] bytes) {
+    public InsertResponse insert(@PathVariable Long cabinet, @PathVariable String name, @RequestBody byte[] bytes) {
         User user = getCurrentUser();
         return cabinetService.insert(user, cabinet, name, bytes);
     }
 
     @DeleteMapping("/{cabinet}/{name}")
-    public ResponseEntity<Void> delete(@PathVariable String cabinet, @PathVariable String name) {
+    public ResponseEntity<Void> delete(@PathVariable Long cabinet, @PathVariable String name) {
         User user = getCurrentUser();
         cabinetService.delete(user, cabinet, name);
         return ResponseEntity.noContent().build();

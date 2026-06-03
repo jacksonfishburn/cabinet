@@ -31,7 +31,5 @@ public class AuthController {
         if (header == null || !header.startsWith("Bearer ")) {
             throw new UnauthorizedException("Missing or invalid Authorization header");
         }
-        String token = header.substring(7);
-        authService.logout(token);
     }
 }
