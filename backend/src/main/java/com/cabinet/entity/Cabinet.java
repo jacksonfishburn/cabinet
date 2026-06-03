@@ -47,11 +47,11 @@ public class Cabinet {
         this.name = name;
     }
 
-    public boolean isPersonal() {
+    public boolean isDefault() {
         return isDefault;
     }
 
-    public void setPersonal(boolean personal) {
+    public void setIsDefault(boolean personal) {
         isDefault = personal;
     }
 

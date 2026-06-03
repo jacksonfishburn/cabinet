@@ -36,6 +36,7 @@ public class AuthService {
         userRepository.save(user);
 
         Cabinet defaultCabinet = cabinetManagementService.createCabinet(user, user.getId().toString());
+        defaultCabinet.setIsDefault(true);
 
         String token = jwtService.generateToken(user);
         return new AuthResponse(defaultCabinet.getId(), user.getUsername(), token);

@@ -99,6 +99,11 @@ public class CabinetService {
         return new ListCabinetsResponse(cabinetInfos);
     }
 
+    public CabinetInfo createCabinet(User user, String name) {
+        Cabinet cabinet = cabinetManagementService.createCabinet(user, name);
+        return new CabinetInfo(cabinet.getId(), name);
+    }
+
     private String computeMd5(byte[] bytes) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");

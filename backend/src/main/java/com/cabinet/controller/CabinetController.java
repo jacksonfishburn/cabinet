@@ -2,6 +2,7 @@ package com.cabinet.controller;
 
 import com.cabinet.entity.FileRecord;
 import com.cabinet.entity.User;
+import com.cabinet.model.CabinetInfo;
 import com.cabinet.model.InsertResponse;
 import com.cabinet.model.ListCabinetsResponse;
 import com.cabinet.service.CabinetService;
@@ -58,6 +59,12 @@ public class CabinetController {
     public ListCabinetsResponse list() {
         User user = getCurrentUser();
         return cabinetService.listCabinets(user);
+    }
+
+    @PostMapping("/create/{name}")
+    public CabinetInfo create(@PathVariable String name) {
+        User user = getCurrentUser();
+        return cabinetService.createCabinet(user, name);
     }
 
     private User getCurrentUser() {

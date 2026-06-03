@@ -22,7 +22,7 @@ public class CabinetManagementService {
     }
 
     public Cabinet createCabinet(User user, String name) {
-        Cabinet cabinet = new Cabinet(name, true);
+        Cabinet cabinet = new Cabinet(name, false);
         CabinetMember member = new CabinetMember(cabinet, user);
 
         cabinetMemberRepository.save(member);
