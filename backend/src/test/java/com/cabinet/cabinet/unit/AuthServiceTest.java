@@ -20,16 +20,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,7 +67,7 @@ class AuthServiceTest {
 
         assertNotNull(response);
         assertEquals("alice", response.username());
-        assertEquals(100L, response.id());
+        assertEquals(100L, response.defaultCabinetId());
         assertEquals("jwt-token", response.token());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
@@ -116,7 +112,7 @@ class AuthServiceTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
         assertEquals("bcrypt-hash", userCaptor.getValue().getPasswordHash());
-        assertTrue(!"my-raw-password".equals(userCaptor.getValue().getPasswordHash()));
+        assertNotEquals("my-raw-password", userCaptor.getValue().getPasswordHash());
     }
 
     // Verifies valid credentials return a JWT token.
@@ -136,7 +132,7 @@ class AuthServiceTest {
         AuthResponse response = authService.login(request);
 
         assertNotNull(response);
-        assertEquals(102L, response.id());
+        assertEquals(102L, response.defaultCabinetId());
         assertEquals("carol", response.username());
         assertEquals("jwt-token", response.token());
     }

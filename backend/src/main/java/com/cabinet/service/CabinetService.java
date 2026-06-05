@@ -37,7 +37,7 @@ public class CabinetService {
     }
 
     @Transactional
-    @CacheEvict(value = "peek", key = "#user.id + ':' + #cabinetName")
+    @CacheEvict(value = "peek", key = "#user.defaultCabinetId + ':' + #cabinetName")
     public InsertResponse insert(User user, Long cabinetId, String fileName, byte[] bytes) {
         Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
         List<FileRecord> userRecords = cabinet.getFileRecords();
@@ -71,14 +71,14 @@ public class CabinetService {
         return fileService.readFile(cabinet.getId().toString(), fileName);
     }
 
-    @Cacheable(value = "peek", key = "#user.id + ':' + #cabinetName")
+    @Cacheable(value = "peek", key = "#user.defaultCabinetId + ':' + #cabinetName")
     public List<FileRecord> peek(User user, Long cabinetId) {
         Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
         return cabinet.getFileRecords();
     }
 
     @Transactional
-    @CacheEvict(value = "peek", key = "#user.id + ':' + #cabinetName")
+    @CacheEvict(value = "peek", key = "#user.defaultCabinetId + ':' + #cabinetName")
     public void delete(User user, Long cabinetId, String fileName) {
         Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
         List<FileRecord> userRecords = cabinet.getFileRecords();

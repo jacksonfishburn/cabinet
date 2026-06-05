@@ -1,7 +1,6 @@
 package com.cabinet.controller;
 
 import com.cabinet.entity.FileRecord;
-import com.cabinet.entity.InviteCode;
 import com.cabinet.entity.User;
 import com.cabinet.model.CabinetInfo;
 import com.cabinet.model.InsertResponse;
@@ -69,7 +68,7 @@ public class CabinetController {
     }
 
     @PostMapping("/invite/{cabinet}")
-    public String generateInviteCode(@PathVariable Long cabinet) {
+    public String invite(@PathVariable Long cabinet) {
         User user = getCurrentUser();
         return cabinetService.generateInviteCode(user, cabinet);
     }

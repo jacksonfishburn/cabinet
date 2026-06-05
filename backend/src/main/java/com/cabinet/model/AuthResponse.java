@@ -1,7 +1,7 @@
 package com.cabinet.model;
 
 public record AuthResponse(
-        Long id,
+        Long defaultCabinetId,
         String username,
         String token
 ) {}
