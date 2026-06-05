@@ -1,6 +1,7 @@
 package com.cabinet.cabinet.integration;
 
 import com.cabinet.model.AuthRequest;
+import com.cabinet.repository.CabinetRepository;
 import com.cabinet.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,10 +41,14 @@ class AuthIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private CabinetRepository cabinetRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
+        cabinetRepository.deleteAll();
         userRepository.deleteAll();
         mockMvc = webAppContextSetup(webApplicationContext).build();
     }

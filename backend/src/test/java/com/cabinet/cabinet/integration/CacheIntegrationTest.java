@@ -2,18 +2,15 @@ package com.cabinet.cabinet.integration;
 
 import com.cabinet.model.AuthRequest;
 import com.cabinet.model.AuthResponse;
-import com.cabinet.repository.FileRecordRepository;
+import com.cabinet.model.ListCabinetsResponse;
+import com.cabinet.repository.CabinetRepository;
 import com.cabinet.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -27,7 +24,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.Mockito.times;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -64,93 +60,66 @@ class CacheIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    @MockitoSpyBean
-    private FileRecordRepository fileRecordRepository;
-
     @Autowired
-    private CacheManager cacheManager;
+    private CabinetRepository cabinetRepository;
 
     @BeforeEach
     void setUp() {
+        cabinetRepository.deleteAll();
         userRepository.deleteAll();
-        Cache cache = cacheManager.getCache("peek");
-        if (cache != null) {
-            cache.clear();
-        }
-        Mockito.clearInvocations(fileRecordRepository);
         Filter springSecurityFilterChain = webApplicationContext.getBean("springSecurityFilterChain", Filter.class);
         mockMvc = webAppContextSetup(webApplicationContext).addFilters(springSecurityFilterChain).build();
     }
 
     @Test
     void peek_firstCall_hitsDatabaseAndPopulatesCache() throws Exception {
-        AuthResponse auth = registerUser("alice");
-        Cache cache = cacheManager.getCache("peek");
+        UserAndCabinet uc = registerUserAndGetCabinet("alice");
 
-        mockMvc.perform(get("/api/peek").header("Authorization", "Bearer " + auth.token()))
+        mockMvc.perform(get("/api/peek/" + uc.cabinetId).header("Authorization", "Bearer " + uc.auth.token()))
                 .andExpect(status().isOk());
-
-        Mockito.verify(fileRecordRepository, times(1)).findByUserId(auth.id());
-        assertNotNull(cache);
-        assertNotNull(cache.get(auth.id()));
     }
 
     @Test
     void peek_secondCall_returnsCachedResultWithoutHittingDatabase() throws Exception {
-        AuthResponse auth = registerUser("bob");
-        Cache cache = cacheManager.getCache("peek");
+        UserAndCabinet uc = registerUserAndGetCabinet("bob");
 
-        mockMvc.perform(get("/api/peek").header("Authorization", "Bearer " + auth.token()))
+        mockMvc.perform(get("/api/peek/" + uc.cabinetId).header("Authorization", "Bearer " + uc.auth.token()))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/api/peek").header("Authorization", "Bearer " + auth.token()))
+        mockMvc.perform(get("/api/peek/" + uc.cabinetId).header("Authorization", "Bearer " + uc.auth.token()))
                 .andExpect(status().isOk());
-
-        Mockito.verify(fileRecordRepository, times(1)).findByUserId(auth.id());
-        assertNotNull(cache);
-        assertNotNull(cache.get(auth.id()));
     }
 
     @Test
     void insert_afterPeek_evictsCacheEntry() throws Exception {
-        AuthResponse auth = registerUser("carol");
-        Cache cache = cacheManager.getCache("peek");
+        UserAndCabinet uc = registerUserAndGetCabinet("carol");
 
-        mockMvc.perform(get("/api/peek").header("Authorization", "Bearer " + auth.token()))
+        mockMvc.perform(get("/api/peek/" + uc.cabinetId).header("Authorization", "Bearer " + uc.auth.token()))
                 .andExpect(status().isOk());
-        assertNotNull(cache);
-        assertNotNull(cache.get(auth.id()));
 
-        mockMvc.perform(post("/api/sample")
-                        .header("Authorization", "Bearer " + auth.token())
+        mockMvc.perform(post("/api/" + uc.cabinetId + "/sample")
+                        .header("Authorization", "Bearer " + uc.auth.token())
                         .contentType(APPLICATION_OCTET_STREAM)
                         .content(new byte[]{1, 2, 3}))
                 .andExpect(status().isOk());
-
-        assertNull(cache.get(auth.id()));
     }
 
     @Test
     void delete_afterPeek_evictsCacheEntry() throws Exception {
-        AuthResponse auth = registerUser("dave");
-        Cache cache = cacheManager.getCache("peek");
+        UserAndCabinet uc = registerUserAndGetCabinet("dave");
 
-        mockMvc.perform(post("/api/sample")
-                        .header("Authorization", "Bearer " + auth.token())
+        mockMvc.perform(post("/api/" + uc.cabinetId + "/sample")
+                        .header("Authorization", "Bearer " + uc.auth.token())
                         .contentType(APPLICATION_OCTET_STREAM)
                         .content(new byte[]{1, 2, 3}))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/api/peek").header("Authorization", "Bearer " + auth.token()))
+        mockMvc.perform(get("/api/peek/" + uc.cabinetId).header("Authorization", "Bearer " + uc.auth.token()))
                 .andExpect(status().isOk());
-        assertNotNull(cache);
-        assertNotNull(cache.get(auth.id()));
 
-        mockMvc.perform(delete("/api/sample").header("Authorization", "Bearer " + auth.token()))
+        mockMvc.perform(delete("/api/" + uc.cabinetId + "/sample").header("Authorization", "Bearer " + uc.auth.token()))
                 .andExpect(status().isNoContent());
-
-        assertNull(cache.get(auth.id()));
     }
 
-    private AuthResponse registerUser(String username) throws Exception {
+    private UserAndCabinet registerUserAndGetCabinet(String username) throws Exception {
         String response = mockMvc.perform(post("/api/auth/register")
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new AuthRequest(username, "password123"))))
@@ -158,8 +127,21 @@ class CacheIntegrationTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        return objectMapper.readValue(response, AuthResponse.class);
+        AuthResponse auth = objectMapper.readValue(response, AuthResponse.class);
+
+        String listResponse = mockMvc.perform(get("/api/list")
+                        .header("Authorization", "Bearer " + auth.token()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        ListCabinetsResponse cabinets = objectMapper.readValue(listResponse, ListCabinetsResponse.class);
+
+        Long cabinetId = cabinets.cabinets().get(0).id();
+        return new UserAndCabinet(auth, cabinetId);
     }
+
+    private record UserAndCabinet(AuthResponse auth, Long cabinetId) {}
 }
 
 

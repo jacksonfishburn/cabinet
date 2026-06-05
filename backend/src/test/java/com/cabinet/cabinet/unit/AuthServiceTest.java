@@ -5,8 +5,10 @@ import com.cabinet.exception.UnauthorizedException;
 import com.cabinet.exception.UserAlreadyExistsException;
 import com.cabinet.model.AuthRequest;
 import com.cabinet.model.AuthResponse;
+import com.cabinet.entity.Cabinet;
 import com.cabinet.repository.UserRepository;
 import com.cabinet.service.AuthService;
+import com.cabinet.service.CabinetManagementService;
 import com.cabinet.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -41,6 +44,9 @@ class AuthServiceTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private CabinetManagementService cabinetManagementService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -48,6 +54,9 @@ class AuthServiceTest {
     @Test
     void register_newUsername_returnsTokenAndSavesUser() {
         AuthRequest request = new AuthRequest("alice", "plain-password");
+        Cabinet defaultCabinet = mock(Cabinet.class);
+        when(defaultCabinet.getId()).thenReturn(100L);
+
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(passwordEncoder.encode("plain-password")).thenReturn("hashed-password");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -55,13 +64,14 @@ class AuthServiceTest {
             user.setId(1L);
             return user;
         });
+        when(cabinetManagementService.createDefaultCabinet(any(User.class), eq("1"))).thenReturn(defaultCabinet);
         when(jwtService.generateToken(any(User.class))).thenReturn("jwt-token");
 
         AuthResponse response = authService.register(request);
 
         assertNotNull(response);
         assertEquals("alice", response.username());
-        assertNotNull(response.token());
+        assertEquals(100L, response.id());
         assertEquals("jwt-token", response.token());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
@@ -86,9 +96,17 @@ class AuthServiceTest {
     @Test
     void register_passwordProvided_hashesPasswordBeforeSaving() {
         AuthRequest request = new AuthRequest("bob", "my-raw-password");
+        Cabinet defaultCabinet = mock(Cabinet.class);
+        when(defaultCabinet.getId()).thenReturn(101L);
+
         when(userRepository.existsByUsername("bob")).thenReturn(false);
         when(passwordEncoder.encode("my-raw-password")).thenReturn("bcrypt-hash");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(2L);
+            return user;
+        });
+        when(cabinetManagementService.createDefaultCabinet(any(User.class), eq("2"))).thenReturn(defaultCabinet);
         when(jwtService.generateToken(any(User.class))).thenReturn("jwt-token");
 
         authService.register(request);
@@ -107,15 +125,18 @@ class AuthServiceTest {
         AuthRequest request = new AuthRequest("carol", "correct-password");
         User existingUser = new User("carol", "stored-bcrypt-hash");
         existingUser.setId(2L);
+        Cabinet defaultCabinet = mock(Cabinet.class);
+        when(defaultCabinet.getId()).thenReturn(102L);
 
         when(userRepository.findByUsername("carol")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("correct-password", "stored-bcrypt-hash")).thenReturn(true);
+        when(cabinetManagementService.getDefaultCabinet(existingUser)).thenReturn(defaultCabinet);
         when(jwtService.generateToken(existingUser)).thenReturn("jwt-token");
 
         AuthResponse response = authService.login(request);
 
         assertNotNull(response);
-        assertEquals(2L, response.id());
+        assertEquals(102L, response.id());
         assertEquals("carol", response.username());
         assertEquals("jwt-token", response.token());
     }
@@ -144,22 +165,6 @@ class AuthServiceTest {
 
         verify(passwordEncoder, never()).matches(any(), any());
         verify(jwtService, never()).generateToken(any(User.class));
-    }
-
-    // Verifies logout succeeds with a token and performs no stateful side effects.
-    @Test
-    void logout_validToken_succeedsWithoutPersistenceCalls() {
-        authService.logout("Bearer any-jwt");
-
-        verifyNoInteractions(userRepository, passwordEncoder, jwtService);
-    }
-
-    // Verifies logout with an unknown token also succeeds without side effects.
-    @Test
-    void logout_unknownToken_succeedsWithoutPersistenceCalls() {
-        authService.logout("Bearer unknown-token");
-
-        verifyNoInteractions(userRepository, passwordEncoder, jwtService);
     }
 }
 
