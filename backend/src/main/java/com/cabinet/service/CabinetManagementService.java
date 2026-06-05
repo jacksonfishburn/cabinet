@@ -12,7 +12,6 @@ import com.cabinet.repository.InviteCodeRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.lang.annotation.IncompleteAnnotationException;
 import java.security.SecureRandom;
 import java.util.List;
 
@@ -22,6 +21,9 @@ public class CabinetManagementService {
     private final CabinetRepository cabinetRepository;
     private final CabinetMemberRepository cabinetMemberRepository;
     private final InviteCodeRepository inviteCodeRepository;
+
+    @Value("${cabinet.code-expiration-ms}")
+    private Long expirationMs;
 
 
     public CabinetManagementService(CabinetRepository cabinetRepository,
@@ -35,14 +37,22 @@ public class CabinetManagementService {
 
     public Cabinet createCabinet(User user, String name) {
         Cabinet cabinet = new Cabinet(name, false);
-        CabinetMember member = new CabinetMember(cabinet, user);
+        cabinetRepository.save(cabinet);
 
+        CabinetMember member = new CabinetMember(cabinet, user);
         cabinetMemberRepository.save(member);
+
+        return cabinet;
+    }
+
+    public Cabinet createDefaultCabinet(User user, String name) {
+        Cabinet cabinet = createCabinet(user, name);
+        cabinet.setIsDefault(true);
         return cabinetRepository.save(cabinet);
     }
 
     public Cabinet getDefaultCabinet(User user) {
-        return cabinetRepository.findByUserIdAndIsDefaultTrue(user.getId())
+        return cabinetRepository.findByMembers_UserIdAndIsDefaultTrue(user.getId())
                 .orElseThrow(CabinetNotFoundException::new);
     }
 
@@ -58,7 +68,7 @@ public class CabinetManagementService {
         while (inviteCodeRepository.findByCode(code).isPresent()) {
             code = generateRandomCode();
         }
-        InviteCode inviteCode = new InviteCode(cabinet, code);
+        InviteCode inviteCode = new InviteCode(cabinet, code, expirationMs);
         return inviteCodeRepository.save(inviteCode).getCode();
     }
 

@@ -9,6 +9,6 @@ import java.util.Optional;
 @Repository
 public interface CabinetRepository extends JpaRepository<Cabinet, Long> {
     Optional<Cabinet> findByName(String name);
-    Optional<Cabinet> findByUserIdAndIsDefaultTrue(Long userId);
-    boolean existsByCabinetIdAndUserId(Long cabinetId, Long userId);
+    Optional<Cabinet> findByMembers_UserIdAndIsDefaultTrue(Long userId);
+    boolean existsByIdAndMembers_UserId(Long cabinetId, Long userId);
 }

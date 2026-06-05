@@ -6,10 +6,10 @@ import com.cabinet.exception.UnauthorizedException;
 import com.cabinet.exception.UserAlreadyExistsException;
 import com.cabinet.model.AuthRequest;
 import com.cabinet.model.AuthResponse;
-import com.cabinet.repository.CabinetRepository;
 import com.cabinet.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -27,6 +27,7 @@ public class AuthService {
         this.cabinetManagementService = cabinetManagementService;
     }
 
+    @Transactional
     public AuthResponse register(AuthRequest request) {
         if (userRepository.existsByUsername(request.username())) {
             throw new UserAlreadyExistsException(request.username());
@@ -35,13 +36,13 @@ public class AuthService {
         User user = new User(request.username(), encodedPassword);
         userRepository.save(user);
 
-        Cabinet defaultCabinet = cabinetManagementService.createCabinet(user, user.getId().toString());
-        defaultCabinet.setIsDefault(true);
+        Cabinet defaultCabinet = cabinetManagementService.createDefaultCabinet(user, user.getId().toString());
 
         String token = jwtService.generateToken(user);
         return new AuthResponse(defaultCabinet.getId(), user.getUsername(), token);
     }
 
+    @Transactional
     public AuthResponse login(AuthRequest request) {
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new UnauthorizedException("User '" + request.username() + "' not found"));
