@@ -40,9 +40,9 @@ public class CabinetService {
     @CacheEvict(value = "peek", key = "#cabinetId")
     public InsertResponse insert(User user, Long cabinetId, String fileName, byte[] bytes) {
         Cabinet cabinet = findCabinetAndVerifyMembership(cabinetId, user);
-        List<FileRecord> userRecords = cabinet.getFileRecords();
+        List<FileRecord> cabinetRecords = cabinet.getFileRecords();
 
-        fileService.validateSizeLimit(userRecords, fileName, bytes);
+        fileService.validateSizeLimit(cabinetRecords, fileName, bytes);
         String md5 = computeMd5(bytes);
 
         FileRecord existing = getFileRecord(cabinet, fileName)
@@ -55,7 +55,7 @@ public class CabinetService {
         }
 
         FileRecord fileRecord = createRecord(cabinet, fileName, bytes.length, md5);
-        userRecords.add(fileRecord);
+        cabinetRecords.add(fileRecord);
         repository.save(cabinet);
         fileService.saveFile(cabinet.getId().toString(), fileName, bytes);
         return new InsertResponse(fileName, bytes.length, md5);
@@ -133,7 +133,9 @@ public class CabinetService {
         return new FileRecord(cabinet, name, size, md5);
     }
 
-    private InsertResponse updateFile(String cabinetId, String fileName, byte[] bytes, String md5, FileRecord existing) {
+    private InsertResponse updateFile(String cabinetId, String fileName,
+                                      byte[] bytes, String md5,
+                                      FileRecord existing) {
         if (md5.equals(existing.getMd5())) {
             existing.setUpdatedAt(Instant.now());
             return new InsertResponse(fileName, existing.getSizeBytes(), existing.getMd5());

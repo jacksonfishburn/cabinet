@@ -25,7 +25,6 @@ public class CabinetManagementService {
     @Value("${cabinet.code-expiration-ms}")
     private Long expirationMs;
 
-
     public CabinetManagementService(CabinetRepository cabinetRepository,
                                     CabinetMemberRepository cabinetMemberRepository,
                                     InviteCodeRepository inviteCodeRepository
