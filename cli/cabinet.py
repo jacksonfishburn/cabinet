@@ -1,7 +1,6 @@
-import sys
-import os
 from pathlib import Path
-from config import *
+import sys
+import config as c
 
 # Import api functions after config is available
 from api import (
@@ -16,28 +15,27 @@ from api import (
     delete,
     invite,
     join,
-    print_file_table,
 )
 
 CONFIG_PATH = Path.home() / ".cabinet" / "config.json"
 
 def open_cabinet(name):
     """Set a cabinet as active"""
-    cabinet_id = get_cabinet_id_by_name(name)
+    cabinet_id = c.get_cabinet_id_by_name(name)
     if not cabinet_id:
-        print(f"Cabinet '{name}' not found in config. Run 'cabinet list' first.")
+        print(f"Cabinet '{name}' not found. Try running 'cabinet list' first.")
         sys.exit(1)
 
-    set_active_cabinet_id(cabinet_id)
+    c.set_active_cabinet_id(cabinet_id)
     print(f"Active cabinet: {name}")
 
 def close_cabinet():
     """Return to default cabinet"""
-    clear_active_cabinet_id()
-    default_id = get_default_cabinet_id()
+    c.clear_active_cabinet_id()
+    default_id = c.get_default_cabinet_id()
 
     # Find the default cabinet name
-    cabinets = get_cabinets()
+    cabinets = c.get_cabinets()
     default_name = next((name for name, cid in cabinets.items() if cid == default_id), "default")
 
     print(f"Active cabinet: {default_name}")
@@ -57,7 +55,7 @@ def main():
         print("  open <name>               - Set active cabinet")
         print("  close                     - Return to default cabinet")
         print("Cabinet operations:")
-        print("  peek [name]               - List files (in cabinet or all cabinets)")
+        print("  peek [name]               - List files (in active cabinet or specified cabinets)")
         print("  invite                    - Get invite code for active cabinet")
         print("  join <code>               - Join cabinet with invite code")
         print("  insert <name>             - Upload current dir as file")
@@ -110,9 +108,9 @@ def main():
         case "peek":
             if len(sys.argv) >= 3:
                 name = sys.argv[2]
-                cabinet_id = get_cabinet_id_by_name(name)
+                cabinet_id = c.get_cabinet_id_by_name(name)
                 if not cabinet_id:
-                    print(f"Cabinet '{name}' not found in config. Run 'cabinet list' first.")
+                    print(f"Cabinet '{name}' not found. Try running 'cabinet list' first.")
                     sys.exit(1)
                 peek(cabinet_id)
             else:

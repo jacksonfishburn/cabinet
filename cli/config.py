@@ -82,7 +82,6 @@ def add_cabinet(name, cabinet_id):
     save_cabinets(cabinets)
 
 def get_cabinet_id_by_name(name):
-    """Get cabinet id from name"""
     return get_cabinets().get(name)
 
 def config():
