@@ -30,6 +30,7 @@ public class CabinetController {
     @GetMapping("/peek/{cabinet}")
     public List<FileRecord> peek(@PathVariable Long cabinet) {
         User user = getCurrentUser();
+        cabinetService.peekVerifyMember(user, cabinet);
         return cabinetService.peek(user, cabinet);
     }
 
