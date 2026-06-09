@@ -50,7 +50,12 @@ EOF
 
 # symlink to /usr/local/bin
 echo "Adding cabinet to PATH (may require your password)..."
-sudo ln -sf "$CABINET_DIR/cabinet.py" "$BIN_PATH"
+
+if [ "$EUID" -ne 0 ]; then
+    sudo ln -sf "$CABINET_DIR/cabinet.py" "$BIN_PATH"
+else
+    ln -sf "$CABINET_DIR/cabinet.py" "$BIN_PATH"
+fi
 
 echo ""
 echo "Cabinet installed successfully."
