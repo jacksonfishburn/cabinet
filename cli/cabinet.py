@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from pathlib import Path
 import sys
 import os
@@ -112,6 +113,7 @@ def config():
 EXPECTED_ERRORS = {
     400: "Bad request",
     401: "Unauthorized",
+    403: "Not logged in",
     404: "Not found",
     409: "Conflict",
     413: "File too large",
@@ -204,6 +206,8 @@ def register(username, password):
             save_default_cabinet_id(default_cabinet_id)
             add_cabinet(username, default_cabinet_id)
 
+        clear_active_cabinet_id()
+
         print(f"'{username}' registered")
     else:
         handle_response_error(response, f"register '{username}'")
@@ -227,6 +231,8 @@ def login(username, password):
         if default_cabinet_id:
             save_default_cabinet_id(default_cabinet_id)
             add_cabinet(username, default_cabinet_id)
+
+        clear_active_cabinet_id()
 
         print(f"'{username}' logged in")
     else:
@@ -260,18 +266,21 @@ def list_cabinets():
     if response.status_code == 200:
         data = response.json()
         cabinets = data.get("cabinets", [])
+        default_id = get_default_cabinet_id()
 
-        # Update config with cabinet mapping
-        cabinets_dict = {c["name"]: c["id"] for c in cabinets}
+        # Update config with cabinet mapping, using "Default" as the display name
+        cabinets_dict = {
+            ("Default" if c["id"] == default_id else c["name"]): c["id"]
+            for c in cabinets
+        }
         save_cabinets(cabinets_dict)
 
-        # Print cabinets
         if cabinets:
-            print("Cabinets:")
             for cabinet in cabinets:
-                print(f"  {cabinet['name']} (id: {cabinet['id']})")
+                display_name = "Default" if cabinet["id"] == default_id else cabinet["name"]
+                print(f"    {display_name}", end="")
         else:
-            print("No cabinets found")
+            print("No cabinets found.")
     else:
         handle_response_error(response, "list cabinets")
 
@@ -333,8 +342,7 @@ def insert(name):
     if response.status_code == 200:
         data = response.json()
         file_name = data.get("name")
-        size = data.get("size")
-        print(f"'{file_name}' inserted ({size} bytes)")
+        print(f"'{file_name}' inserted")
     else:
         handle_response_error(response, f"insert '{name}'")
 
@@ -391,7 +399,7 @@ def invite():
 
     response = requests.post(f"{url}/api/invite/{cabinet_id}", headers=headers)
 
-    if response.status_code == 200:
+    if response.status_code == 200: 
         code = response.text
         print(f"Invite code: {code}")
     else:
@@ -434,13 +442,7 @@ def open_cabinet(name):
 def close_cabinet():
     """Return to default cabinet"""
     clear_active_cabinet_id()
-    default_id = get_default_cabinet_id()
-
-    # Find the default cabinet name
-    cabinets = get_cabinets()
-    default_name = next((name for name, cid in cabinets.items() if cid == default_id), "default")
-
-    print(f"Active cabinet: {default_name}")
+    print("Active cabinet: Default")
 
 
 # Main CLI handling
