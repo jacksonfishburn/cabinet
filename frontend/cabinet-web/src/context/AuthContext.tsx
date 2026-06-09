@@ -2,12 +2,13 @@ import { createContext, useEffect, useMemo, useState, type ReactNode } from "rea
 import type { AuthRequest, AuthResponse } from "../types";
 import { clearToken, getToken, login, logout, register, setToken } from "../api";
 
-type AuthUser = Pick<AuthResponse, "id" | "username">;
+type AuthUser = Pick<AuthResponse, "defaultCabinetId" | "username">;
 const AUTH_SESSION_KEY = "cabinet.auth-session";
 
 export interface AuthContextValue {
   token: string | null;
   user: AuthUser | null;
+  defaultCabinetId: number | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
   signIn: (request: AuthRequest) => Promise<AuthResponse>;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [defaultCabinetId, setDefaultCabinetId] = useState<number | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (storedSession) {
       try {
-        const parsedSession = JSON.parse(storedSession) as { token?: string; user?: AuthUser };
+        const parsedSession = JSON.parse(storedSession) as { token?: string; user?: Partial<AuthUser> & { id?: number } };
 
         if (parsedSession.token) {
           setTokenState(parsedSession.token);
@@ -39,7 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (parsedSession.user) {
-          setUser(parsedSession.user);
+          const nextCabinetId = parsedSession.user.defaultCabinetId ?? parsedSession.user.id ?? null;
+          if (nextCabinetId !== null) {
+            setDefaultCabinetId(nextCabinetId);
+            if (parsedSession.user.username) {
+              setUser({
+                defaultCabinetId: nextCabinetId,
+                username: parsedSession.user.username,
+              });
+            }
+          }
         }
       } catch {
         if (storedToken) {
@@ -54,9 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSession = (response: AuthResponse) => {
-    const nextUser = { id: response.id, username: response.username };
+    const nextUser = { defaultCabinetId: response.defaultCabinetId, username: response.username };
     setToken(response.token);
     setTokenState(response.token);
+    setDefaultCabinetId(response.defaultCabinetId);
     setUser(nextUser);
     localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ token: response.token, user: nextUser }));
   };
@@ -66,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(AUTH_SESSION_KEY);
     setTokenState(null);
     setUser(null);
+    setDefaultCabinetId(null);
   };
 
   const signIn = async (request: AuthRequest): Promise<AuthResponse> => {
@@ -91,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(() => ({
     token,
     user,
+    defaultCabinetId,
     isAuthenticated: Boolean(token),
     isInitializing,
     signIn,
@@ -98,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     setSession,
     clearSession,
-  }), [isInitializing, token, user]);
+  }), [defaultCabinetId, isInitializing, token, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

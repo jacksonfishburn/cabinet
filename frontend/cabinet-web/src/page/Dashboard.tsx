@@ -14,10 +14,10 @@ function Dashboard() {
     const [isUploading, setIsUploading] = useState(false);
     const [isGrabbing, setIsGrabbing] = useState(false);
 
-    const archiveList = Object.values(files).map(f => ({ name: f.name, md5: f.md5 }));
+    const archiveList = files.map(f => ({ name: f.name, md5: f.md5 }));
 
     const findByMd5 = (md5: string) => {
-        return Object.values(files).find(f => f.md5 === md5) ?? null;
+        return files.find(f => f.md5 === md5) ?? null;
     }
 
     const handleDelete = async (name: string) => {

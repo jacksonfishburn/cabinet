@@ -6,6 +6,21 @@ export interface FileRecord {
   updatedAt: string;
 }
 
+export interface InsertResponse {
+  name: string;
+  sizeBytes: number;
+  md5: string;
+}
+
+export interface CabinetInfo {
+  id: number;
+  name: string;
+}
+
+export interface ListCabinetsResponse {
+  cabinets: CabinetInfo[];
+}
+
 export type ArchiveViewProps = FileRecord & {
   onDelete: (name: string) => Promise<void>;
   onGrab?: (name: string) => Promise<void>;
@@ -26,7 +41,7 @@ export interface AuthRequest {
 }
 
 export interface AuthResponse {
-  id: number;
+  defaultCabinetId: number;
   username: string;
   token: string;
 }

@@ -1,5 +1,5 @@
 
-import type { AuthRequest, AuthResponse, FileRecord } from "./types";
+import type { AuthRequest, AuthResponse, CabinetInfo, FileRecord, InsertResponse, ListCabinetsResponse } from "./types";
 
 const SERVER_URL = "/api";
 const TOKEN_STORAGE_KEY = "cabinet.token";
@@ -65,6 +65,11 @@ const fetchJson = async <T>(url: string, init: RequestInit, fallback: string): P
   return response.json() as Promise<T>;
 };
 
+const cabinetPath = (cabinetId: number, name?: string): string => {
+  const base = `${SERVER_URL}/${cabinetId}`;
+  return name ? `${base}/${encodeURIComponent(name)}` : base;
+};
+
 const authRequest = async (path: string, request: AuthRequest): Promise<AuthResponse> => {
   return fetchJson<AuthResponse>(`${SERVER_URL}/auth${path}`, {
     method: 'POST',
@@ -98,8 +103,8 @@ export const logout = async (): Promise<void> => {
 };
 
 
-export const peek = async (): Promise<Record<string, FileRecord>> => {
-  const response = await fetch(`${SERVER_URL}/peek`, {
+export const peek = async (cabinetId: number): Promise<FileRecord[]> => {
+  const response = await fetch(`${SERVER_URL}/peek/${cabinetId}`, {
     method: 'GET',
     headers: getHeaders(),
   });
@@ -112,8 +117,8 @@ export const peek = async (): Promise<Record<string, FileRecord>> => {
 };
 
 
-export const insert = async (name: string, zipBlob: Blob): Promise<FileRecord> => {
-  const response = await fetch(`${SERVER_URL}/${encodeURIComponent(name)}`, {
+export const insert = async (cabinetId: number, name: string, zipBlob: Blob): Promise<InsertResponse> => {
+  const response = await fetch(cabinetPath(cabinetId, name), {
     method: 'POST',
     headers: getHeaders('application/octet-stream'),
     body: zipBlob,
@@ -127,8 +132,8 @@ export const insert = async (name: string, zipBlob: Blob): Promise<FileRecord> =
 };
 
 
-export const grab = async (name: string): Promise<Blob> => {
-  const response = await fetch(`${SERVER_URL}/${encodeURIComponent(name)}`, {
+export const grab = async (cabinetId: number, name: string): Promise<Blob> => {
+  const response = await fetch(cabinetPath(cabinetId, name), {
     method: 'GET',
     headers: getHeaders(),
   });
@@ -141,8 +146,8 @@ export const grab = async (name: string): Promise<Blob> => {
 };
 
 
-export const deleteItem = async (name: string): Promise<void> => {
-  const response = await fetch(`${SERVER_URL}/${encodeURIComponent(name)}`, {
+export const deleteItem = async (cabinetId: number, name: string): Promise<void> => {
+  const response = await fetch(cabinetPath(cabinetId, name), {
     method: 'DELETE',
     headers: getHeaders(),
   });
@@ -150,4 +155,18 @@ export const deleteItem = async (name: string): Promise<void> => {
   if (!response.ok && response.status !== 204) {
     await readError(response, `Error deleting '${name}'`);
   }
+};
+
+export const listCabinets = async (): Promise<ListCabinetsResponse> => {
+  return fetchJson<ListCabinetsResponse>(`${SERVER_URL}/list`, {
+    method: 'GET',
+    headers: getHeaders(),
+  }, 'Error listing cabinets');
+};
+
+export const createCabinet = async (name: string): Promise<CabinetInfo> => {
+  return fetchJson<CabinetInfo>(`${SERVER_URL}/create/${encodeURIComponent(name)}`, {
+    method: 'POST',
+    headers: getHeaders(),
+  }, `Error creating cabinet '${name}'`);
 };

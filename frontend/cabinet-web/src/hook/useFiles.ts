@@ -6,8 +6,8 @@ import { useAuth } from "./useAuth";
 
 
 export function useFiles() {
-  const { clearSession } = useAuth();
-  const [files, setFiles] = useState<Record<string, FileRecord>>({});
+  const { clearSession, defaultCabinetId } = useAuth();
+  const [files, setFiles] = useState<FileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,10 +23,16 @@ export function useFiles() {
   const refresh = async () => {
     try {
       setError(null);
-      const data = await peek();
+      if (defaultCabinetId === null) {
+        setFiles([]);
+        setError("No active cabinet");
+        return;
+      }
+
+      const data = await peek(defaultCabinetId);
       setFiles(data);
     } catch (err) {
-      setFiles({});
+      setFiles([]);
       handleAuthFailure(err);
       setError(err instanceof Error ? err.message : "Failed to load files");
     }
@@ -34,12 +40,16 @@ export function useFiles() {
 
   useEffect(() => {
     refresh().finally(() => setIsLoading(false));
-  }, []);
+  }, [defaultCabinetId]);
 
   const deleteFile = async (name: string) => {
     try {
       setError(null);
-      await deleteItem(name);
+      if (defaultCabinetId === null) {
+        throw new Error("No active cabinet");
+      }
+
+      await deleteItem(defaultCabinetId, name);
       await refresh();
     } catch (err) {
       handleAuthFailure(err);
@@ -75,7 +85,11 @@ export function useFiles() {
       });
 
       const archiveName = uploadRoot || files[0].name;
-      await insert(archiveName, zipBlob);
+      if (defaultCabinetId === null) {
+        throw new Error("No active cabinet");
+      }
+
+      await insert(defaultCabinetId, archiveName, zipBlob);
       await refresh();
     } catch (err) {
       handleAuthFailure(err);
@@ -86,7 +100,11 @@ export function useFiles() {
   const grabFile = async (name: string): Promise<File> => {
     try {
       setError(null);
-      const zipBlob = await grab(name);
+      if (defaultCabinetId === null) {
+        throw new Error("No active cabinet");
+      }
+
+      const zipBlob = await grab(defaultCabinetId, name);
       const archive = await JSZip.loadAsync(zipBlob);
       const entry = Object.values(archive.files).find((file) => !file.dir);
 
