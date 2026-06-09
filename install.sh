@@ -43,7 +43,7 @@ fi
 # write config.json
 cat > "$CABINET_DIR/config.json" <<EOF
 {
-  "serverUrl": "$SERVER_URL",
+  "server_url": "$SERVER_URL",
   "token": ""
 }
 EOF
