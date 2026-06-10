@@ -1,4 +1,5 @@
 # Cabinet
+live demo: [cabinet.jacksonfishburn.dev](https://cabinet.jacksonfishburn.dev/)
 ---
 Cabinet is self-hosted, file-sync tool for personal or team use - build as both a personal utility and a learning project. You can use your personal cabinet to upload and retrieve directories, or create a shared cabinet which you can invite other users to so you can access the same shared folders. 
 
