@@ -1,7 +1,10 @@
 # Cabinet
-live demo: [cabinet.jacksonfishburn.dev](https://cabinet.jacksonfishburn.dev/)
 ---
-Cabinet is self-hosted, file-sync tool for personal or team use - build as both a personal utility and a learning project. You can use your personal cabinet to upload and retrieve directories, or create a shared cabinet which you can invite other users to so you can access the same shared folders. 
+Cabinet is self-hosted, file-sync tool for personal or team use - build as both a personal utility and a learning project. You can use your personal cabinet to upload and retrieve directories, or create shared cabinets which you can invite other users to so you can access the same shared folders. 
+
+**Live demo:** [cabinet.jacksonfishburn.dev](https://cabinet.jacksonfishburn.dev/)
+
+> Note: The demo covers auth and file upload/download. Shared cabinet features are CLI-only.
 
 ### How it Works
 The backend is a Spring Boot REST API running in Docker alongside a PostgreSQL database. Files are stored on the server's filesystem, with metadata tracked in the database. A lightweight Python CLI handles zipping, uploading, and downloading from the command line.
