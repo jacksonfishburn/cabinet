@@ -6,6 +6,18 @@ Cabinet is self-hosted, file-sync tool for personal or team use - build as both 
 
 > Note: The demo covers auth and file upload/download. Shared cabinet features are CLI-only.
 
+### What I learned
+I wanted to take what I had learned in my classes, where I built PlanMyDay and the chess server, and build on it by using industry standard tools. 
+- My chess project required that I build the Server and manage class dependencies from scratch, which helped me understand the work that Spring was doing for me behind the scenes.
+- Using Docker Compose to containerize the different services (Frontend, Backend, Postgres, Redis) taught me the value of containerization when it comes to sharing work and deployment.
+- Implementing stateless auth with JWT helped me think about decisions in a performance focused way.
+- Doing things on my own with no outline or handholding taught me a lot about designing software and configuration. I had to:
+	- Decide on my own dependencies and manage them myself
+	- Manage environment variables and secrets
+	- Understand and set up running it locally for dev and running it in deployment
+	- Design my DB schema and repositories
+	- Decide on endpoint shapes and separation of concerns for client and server
+
 ### How it Works
 The backend is a Spring Boot REST API running in Docker alongside a PostgreSQL database. Files are stored on the server's filesystem, with metadata tracked in the database. A lightweight Python CLI handles zipping, uploading, and downloading from the command line.
 
