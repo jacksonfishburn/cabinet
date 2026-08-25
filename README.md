@@ -5,6 +5,8 @@ Cabinet is self-hosted, file-sync tool for personal or team use - build as both 
 ### How it Works
 The backend is a Spring Boot REST API running in Docker alongside a PostgreSQL database. Files are stored on the server's filesystem, with metadata tracked in the database. A lightweight Python CLI handles zipping, uploading, and downloading from the command line.
 
+Database schema and HTTP API: see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ---
 ### Self-hosting
 

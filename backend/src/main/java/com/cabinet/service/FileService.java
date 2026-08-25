@@ -5,10 +5,7 @@ import com.cabinet.exception.FileTooLargeException;
 import com.cabinet.exception.InvalidFileException;
 import com.cabinet.exception.StorageException;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
